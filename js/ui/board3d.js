@@ -1888,6 +1888,9 @@ export class Board3D {
     for (const k in st.roads) {
       const E = bd.edges[+k], owner = st.roads[k];
       for (const [v, o] of [[E.a, E.b], [E.b, E.a]]) {
+        // a rival's house cuts the road: no joint under it, so the plank visibly stops short
+        const b = st.buildings[v];
+        if (b && b.owner !== owner) continue;
         const key = v + ':' + owner;
         if (!ends.has(key)) ends.set(key, []);
         ends.get(key).push(o);

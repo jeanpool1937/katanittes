@@ -551,6 +551,7 @@ function startRound(s) {
     }
     case 'storm':
       if (!s.config.rules.noRobber) {
+        s.board.robberFrom = s.board.robber;
         s.board.robber = randomLandTile(s, s.board.robber);
         E.tile = s.board.robber;
       }
@@ -888,6 +889,7 @@ H.moveRobber = (s, a) => {
   if (s.config.modes.fog && victims.length && !victims.includes(victim)) victim = pick(s.rng, victims);
   if (victims.length && !victims.includes(victim)) fail('Elige a quién robar.');
   if (!victims.length) victim = null;
+  s.board.robberFrom = s.board.robber; // bots use it so they don't just send it back
   s.board.robber = a.tile;
   s.fx.push({ kind: 'robber', tile: a.tile });
   log(s, msg('🦹 @{p} mueve el ladrón.', { p: a.pid }), a.pid);

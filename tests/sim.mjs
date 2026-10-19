@@ -100,12 +100,17 @@ for (let i = 0; i < GAMES; i++) {
       for (const pid of actors) {
         const a = botAct(s, pid);
         if (!a) continue;
-        const before = JSON.stringify({ bank: s.bank, res: s.players.map(p => p.res) });
+        const robberBefore = s.board.robber, roadsBefore = { ...s.roads }, setupBefore = s.phase === 'setup';
         const r = applyAction(s, a);
         if (!r.ok) throw new Error(`acción ilegal del bot ${JSON.stringify(a)} en fase ${s.phase}: ${r.error}`);
         check(s, a.type);
+        if (a.type === 'moveRobber' && s.board.robber === robberBefore) throw new Error(`[moveRobber] el ladrón se quedó en la casilla ${robberBefore}`);
+        // a new road must connect at an end that isn't a rival's building (checked when it's built:
+        // a rival may legally cut it later by settling in between)
+        if (!setupBefore)
+          for (const k in s.roads) if (roadsBefore[k] === undefined && !canBuildRoad({ ...s, roads: roadsBefore }, s.roads[k], +k))
+            throw new Error(`[${a.type}] camino ${k} no conecta (o pasa por un edificio rival)`);
         acted = true;
-        void before;
         break;
       }
       if (!acted) throw new Error(`bloqueo: fase=${s.phase} actores=${actors} trade=${JSON.stringify(s.trade)}`);

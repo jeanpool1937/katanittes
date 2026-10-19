@@ -124,11 +124,16 @@ function bestRoad(s, pid) {
   const roads = legalRoads(s, pid);
   if (!roads.length) return null;
   let bi = null, bs = 0;
+  const rival = v => s.buildings[v] && s.buildings[v].owner !== pid;
   for (const e of roads) {
     const E = s.board.edges[e];
-    // extend toward good open spots
+    // a road into a rival's house is a dead end that looks like it runs through it
+    if (rival(E.a) || rival(E.b)) continue;
+    const linked = v => (s.buildings[v] && s.buildings[v].owner === pid) || s.board.vertices[v].edges.some(x => x !== e && s.roads[x] === pid);
+    // extend toward good open spots (only from the end the road grows out of)
     let sc = 0;
     for (const [from, to] of [[E.a, E.b], [E.b, E.a]]) {
+      if (!linked(from)) continue;
       if (openFor(s, to)) sc = Math.max(sc, vertexScore(s, pid, to, prod));
       for (const w of s.board.vertices[to].adj) if (w !== from && openFor(s, w)) sc = Math.max(sc, vertexScore(s, pid, w, prod) * 0.55);
     }
@@ -303,7 +308,9 @@ function robber(s, pid) {
     }
     return sc + noise(s, id) * 0.2;
   };
-  const tile = best(tiles, scoreTile);
+  // sending it straight back to the tile it just left looks like it never moved
+  const away = tiles.filter(id => id !== s.board.robberFrom);
+  const tile = best(away.length ? away : tiles, scoreTile);
   const victims = stealTargets(s, pid, tile);
   const victim = victims.length ? best(victims, v => victoryPoints(s, v, false) * 2 + handSize(s.players[v].res) * 0.3) : undefined;
   return { type: 'moveRobber', pid, tile, victim };
