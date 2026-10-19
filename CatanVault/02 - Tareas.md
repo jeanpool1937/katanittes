@@ -38,6 +38,8 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Corregir en los README la frase «there's no game server»: explicar el servidor de saludo de PeerJS y los STUN ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
 - [ ] Revisar el rendimiento del juego: medir FPS y tiempo por fotograma en el navegador y proponer mejoras concretas ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
 - [ ] Publicar en Reddit las tres respuestas redactadas (ladrón, NAT, azar); la del ladrón después de arreglarlo ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
+- [ ] Responder en Reddit al comentario de las reglas (ladrón y caminos) con el texto de la nota ➕ 2026-10-19 [[S09 - 2026-10-19 - Bots que respetan las reglas]]
+- [ ] Ver en una partida real contra bots, en 3D, que el ladrón ya no vuelve a su casilla anterior y que los caminos se ven cortados en las casas rivales ➕ 2026-10-19 [[S09 - 2026-10-19 - Bots que respetan las reglas]]
 
 ## Hechas
 - [x] Licencia MIT, `NOTICE.md` y petición de crédito ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
@@ -57,3 +59,4 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [x] Nombre oficial Katanittes, bots sin Kchudites, ADHD transparente con carrera de ovejas y la mina, y tráilers regrabados ✅ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
 - [x] El juego en seis idiomas con selector en el menú principal ✅ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
 - [x] Kit de Reddit con textos por comunidad y GIFs del tráiler ✅ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [x] Bots: el ladrón no vuelve a la casilla de la que salió, no hay caminos que mueren en casas rivales y el 3D dibuja el camino cortado ✅ 2026-10-19 [[S09 - 2026-10-19 - Bots que respetan las reglas]]

@@ -4,11 +4,11 @@ tags: [contexto]
 
 # 01 - Active Context
 
-**Última sesión:** [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
-**Último commit documentado:** `33a2883` (cierre de S07; en S08 no hubo commits de código)
+**Última sesión:** [[S09 - 2026-10-19 - Bots que respetan las reglas]]
+**Último commit documentado:** `026d45a` (arreglo de los bots en S09)
 
 ## Estado
-**Katanittes** está publicado en GitHub Pages, en seis idiomas, con tráilers regrabados y el kit de Reddit listo. Ya se compartió y llegaron los primeros comentarios: el ladrón cuesta verlo, el online falla cuando los dos jugadores están detrás de NAT estricto (no hay relay TURN configurado) y alguien opina que Catan tiene demasiado azar. Las respuestas en inglés están redactadas. Además, la descripción del repo en GitHub todavía dice «Catan x Kchudites» y el README no tiene un video que se reproduzca en la página, solo un póster con enlace y un GIF.
+**Katanittes** está publicado en GitHub Pages, en seis idiomas, y ya lo está probando gente de fuera. En S09 se atendió un comentario de que los bots «rompían las reglas». No era así, pero lo parecía: devolvían el ladrón a la casilla de la que acababa de salir, y un camino rival que llegaba a tu casa se dibujaba como si la atravesara. Ya está arreglado y publicado, y el simulador vigila ambos casos. Sigue sin hacerse el plan de S08: ladrón más visible, video dentro del README, descripción del repo, la frase del README sobre el servidor, el relay TURN y el rendimiento.
 
 ## Siguiente paso
-Aplicar el plan de S08, que quedó sin hacer: descripción del repo, video dentro del README (comprimir a menos de 10 MB y subirlo desde github.com), ladrón más visible, corregir la frase del README sobre el servidor y revisar el rendimiento. Decidir si se crea la cuenta de Metered para el TURN. Después, publicar las respuestas en Reddit. Ver [[02 - Tareas]].
+Responder en Reddit a los cuatro comentarios: tres de S08 y el de las reglas de S09. La respuesta del ladrón conviene publicarla después de hacerlo más visible. Después, aplicar el plan de S08 empezando por el ladrón. Ver [[02 - Tareas]].
