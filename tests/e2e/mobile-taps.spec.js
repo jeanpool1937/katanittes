@@ -84,14 +84,15 @@ test('móvil: menú → local vs bots → primer poblado (tap)', async ({ browse
     await tap(page.getByTestId('start-game'));
     await expect(page.getByTestId('game-screen')).toBeVisible({ timeout: 45_000 });
     await expect(page.locator('.game.screen')).toHaveAttribute('data-phase', 'setup');
-    const before = await page.locator('.game.screen').getAttribute('data-setup-idx');
-    await tapSpot(page);
     await expect.poll(async () => {
+      const seat = await page.locator('.game.screen').getAttribute('data-seat');
+      const current = await page.locator('.game.screen').getAttribute('data-current');
       const step = await page.locator('.game.screen').getAttribute('data-setup');
-      const idx = await page.locator('.game.screen').getAttribute('data-setup-idx');
-      return `${step}|${idx}`;
-    }, { timeout: 20_000 }).not.toBe(`settlement|${before}`);
-    await page.screenshot({ path: join(ART, `bots-settlement-${testInfo.project.name}.png`), fullPage: true, timeout: 8_000 });
+      return seat === current && step === 'settlement' ? 'go' : `${seat}/${current}/${step}`;
+    }, { timeout: 40_000 }).toBe('go');
+    await tapSpot(page);
+    await expect.poll(async () => page.locator('.game.screen').getAttribute('data-setup'), { timeout: 20_000 }).toBe('road');
+    await page.screenshot({ path: join(ART, `bots-settlement-${testInfo.project.name}.png`), timeout: 8_000 });
     await testInfo.attach('bots-settlement', { path: join(ART, `bots-settlement-${testInfo.project.name}.png`), contentType: 'image/png' });
     const ignore = /favicon|fonts\.g|Failed to load resource|net::ERR_|WebGL|flat|cdn\.jsdelivr|unpkg/i;
     expect(errors.filter(e => !ignore.test(e)), errors.join('\n')).toEqual([]);
@@ -117,7 +118,8 @@ test('móvil: menú → online → crear sala (tap)', async ({ browser }, testIn
     await tap(page.getByTestId('create-room'));
     const code = page.getByTestId('room-code');
     await expect(code).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 40_000 });
-    await page.screenshot({ path: join(ART, `online-lobby-${testInfo.project.name}.png`), fullPage: true, timeout: 8_000 });
+    await code.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(ART, `online-lobby-${testInfo.project.name}.png`), timeout: 8_000 });
     await testInfo.attach('online-lobby', { path: join(ART, `online-lobby-${testInfo.project.name}.png`), contentType: 'image/png' });
     const ignore = /favicon|fonts\.g|Failed to load resource|net::ERR_|WebGL|flat|cdn\.jsdelivr|unpkg/i;
     expect(errors.filter(e => !ignore.test(e)), errors.join('\n')).toEqual([]);
