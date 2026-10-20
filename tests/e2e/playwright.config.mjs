@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,7 +19,20 @@ export default defineConfig({
     trace: 'off',
     actionTimeout: 15_000,
     screenshot: 'off',
+    hasTouch: true,
   },
+  projects: [
+    {
+      name: 'chromium-phone',
+      testMatch: '*.spec.js',
+      use: { ...devices['Pixel 5'], locale: 'es-ES', hasTouch: true, isMobile: true },
+    },
+    {
+      name: 'webkit-phone',
+      testMatch: 'mobile-taps.spec.js',
+      use: { ...devices['iPhone 13'], locale: 'es-ES', hasTouch: true, isMobile: true },
+    },
+  ],
   webServer: {
     command: 'node static-server.mjs',
     cwd: here,

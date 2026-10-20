@@ -9,7 +9,22 @@ import { openFlagEditor, flagImg, myKingdom, saveMyKingdom, patternFlag } from '
 import { autoPixelize } from './ui/pixel.js';
 import { t, LANGS, lang, setLang } from './i18n.js';
 
-// live 3D island slowly orbiting behind the title
+// WebGL on a full-screen canvas behind the menu steals taps on phones
+// (compositor layer + touch-action:none), even when the parent has pointer-events:none.
+function wantMenuDiorama() {
+  try {
+    const q = new URLSearchParams(location.search);
+    const gfx = q.get('gfx');
+    if (gfx === 'off' || gfx === 'flat' || gfx === '2d') return false;
+    if (gfx === '3d') return true;
+    if (window.matchMedia('(pointer: coarse)').matches) return false;
+    if (Math.min(innerWidth, innerHeight) < 700) return false;
+    if ((navigator.maxTouchPoints || 0) > 0 && innerWidth < 900) return false;
+  } catch {}
+  return true;
+}
+
+// live 3D island slowly orbiting behind the title (desktop only; phones skip it)
 async function menuDiorama(el) {
   try {
     const [{ Board3D }, { createGame }, { defaultConfig }] = await Promise.all([import('./ui/board3d.js'), import('./engine/game.js'), import('./engine/config.js')]);
@@ -118,7 +133,7 @@ function menuScreen(root) {
         h('button', { class: 'btn green', style: { flex: 1 }, onclick: e => reopenRoom(e.currentTarget) }, t('🔁 Reabrir sala {code} (ronda {n})', { code: hostSess.code, n: hostSess.state.round })),
         h('button', { class: 'btn ghost', title: t('Cerrar esa sala para siempre'), onclick: () => { storage(HOST_SESSION, null); App.go('menu'); } }, '✕')) : null,
       guestSess ? h('button', { class: 'btn green', onclick: () => backToRoom(guestSess) }, t('📡 Volver a la sala {code}', { code: guestSess.code })) : null,
-      h('button', { class: 'btn primary', onclick: () => App.go('lobby') }, t('🎮 Jugar local (hotseat + bots)')),
+      h('button', { class: 'btn primary', 'data-testid': 'play-local', onclick: () => App.go('lobby') }, t('🎮 Jugar local (hotseat + bots)')),
       h('button', { class: 'btn pink', 'data-testid': 'play-online', onclick: () => App.go('online') }, t('🌐 Jugar online con amigos')),
       h('button', { class: 'btn', onclick: () => App.go('editor') }, t('✏️ Editor de mapas')),
       h('button', { class: 'btn', onclick: () => quickBots() }, t('👀 Ver una partida de bots')),
@@ -127,7 +142,7 @@ function menuScreen(root) {
         h('a', { class: 'btn', href: 'showcase/trailer.html', style: { textDecoration: 'none', flex: 1 } }, t('🎞️ Tráiler')),
         h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none', flex: 1 } }, t('🎬 Showcase')))),
     h('div', { class: 'menu-foot' }, t('Hecho para jugar con amigos · funciona en PC y móvil · sin instalar nada'), creditLine())));
-  if (!new URLSearchParams(location.search).get('gfx')) menuDiorama(dio);
+  if (wantMenuDiorama()) menuDiorama(dio);
 }
 
 async function quickBots() {
@@ -153,7 +168,7 @@ function onlineScreen(root) {
   const dio = h('div', { class: 'menu-bg3d' });
   const inner = h('div', { class: 'hub-inner' });
   root.append(h('div', { class: 'online-hub screen' }, dio, inner));
-  if (!params.get('gfx')) menuDiorama(dio);
+  if (wantMenuDiorama()) menuDiorama(dio);
   const kingdom = myOrDefaultKingdom;
   let capacity = DEFAULT_CAPACITY;
   let busy = false;

@@ -78,9 +78,11 @@ input[type=range] { accent-color: var(--sand); }
 .on > .switch, .switch.on { background: var(--coral); }
 
 /* ---------- menu ---------- */
-.menu-bg3d { position: absolute; inset: 0; pointer-events: none; }
-.menu-bg3d::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(26,28,44,.15) 0%, rgba(26,28,44,.75) 70%); pointer-events: none; }
-.menu-bg3d .board-3d { width: 100%; height: 100%; }
+.menu-bg3d { position: absolute; inset: 0; z-index: 0; pointer-events: none !important; }
+.menu-bg3d::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(26,28,44,.15) 0%, rgba(26,28,44,.75) 70%); pointer-events: none !important; }
+.menu-bg3d, .menu-bg3d * { pointer-events: none !important; touch-action: auto !important; }
+.menu-bg3d .board-3d { width: 100%; height: 100%; pointer-events: none !important; }
+.logo, .menu-kingdom, .menu-buttons, .menu-foot, .lang-pick, .hub-inner { position: relative; z-index: 2; }
 .logo .t1 { font-family: var(--display); font-size: clamp(64px, 13vw, 140px); letter-spacing: 6px; background: none; color: var(--sand); -webkit-background-clip: initial; background-clip: initial; filter: none;
   text-shadow: 0 6px 0 var(--coral), 0 12px 0 var(--ink); }
 .logo .x { font-family: var(--display); color: var(--cyan); text-shadow: 4px 4px 0 var(--ink); transform: none; }
@@ -171,8 +173,8 @@ input[type=range] { accent-color: var(--sand); }
 /* build hints: soft yellow with a slow breathing glow (no hard blinking). No `transform` here either. */
 .hot3d { pointer-events: auto; border: 0; cursor: pointer; background: #ffe7a3; padding: 0; opacity: .85;
   box-shadow: 0 0 0 3px var(--ink), 0 0 0 4px rgba(255,231,163,.45); animation: hotBreath 2.4s ease-in-out infinite; }
-.hot3d.v { width: 16px; height: 16px; }
-.hot3d.e { width: 22px; height: 10px; }
+.hot3d.v { width: 22px; height: 22px; }
+.hot3d.e { width: 28px; height: 14px; }
 .hot3d.t { width: 30px; height: 30px; display: grid; place-items: center; }
 .hot3d.t::after { content: '✖'; color: var(--ink); font-size: 15px; }
 .hot3d:hover, .hot3d:active, .hot3d:focus-visible { animation: none; opacity: 1; background: #fff4cf; box-shadow: 0 0 0 3px var(--ink), 0 0 0 7px #ffe7a3; }
@@ -256,9 +258,9 @@ img.flag-img:not(.pixel) { image-rendering: auto; }
 .players.compact .pcard .avatar img.flag-img { width: 30px; height: 20px; }
 
 /* ================= online hub ================= */
-.online-hub { position: relative; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; }
+.online-hub { position: relative; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; touch-action: manipulation; }
 .online-hub .menu-bg3d::after { background: radial-gradient(ellipse at center, rgba(26,28,44,.55) 0%, rgba(26,28,44,.88) 75%); }
-.hub-inner { position: relative; max-width: 1180px; margin: 0 auto; padding: 18px 16px 30px; }
+.hub-inner { position: relative; z-index: 2; max-width: 1180px; margin: 0 auto; padding: 18px 16px 30px; }
 .hub-head { display: flex; gap: 16px; align-items: center; margin-bottom: 8px; }
 .hub-head h2 { font-size: clamp(24px, 4vw, 40px); color: var(--sand); text-shadow: 0 4px 0 var(--wine), 0 8px 0 var(--ink); }
 .hub-sub { color: var(--steel); font-size: 15px; margin-top: 6px; text-shadow: 2px 2px 0 var(--ink); }

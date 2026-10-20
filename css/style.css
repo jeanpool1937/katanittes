@@ -54,7 +54,10 @@ h1, h2, h3 { font-family: var(--display); margin: 0; }
 .screen { min-height: 100vh; }
 
 /* ---------- menu ---------- */
-.menu { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; min-height: 100dvh; padding: 24px 16px; position: relative; overflow-x: hidden; overflow-y: auto; }
+.menu { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; min-height: 100dvh; padding: 24px 16px; position: relative; overflow-x: hidden; overflow-y: auto; touch-action: manipulation; }
+.menu-bg3d { z-index: 0; pointer-events: none; }
+.menu-bg3d, .menu-bg3d * { pointer-events: none !important; }
+.logo, .menu-buttons, .menu-kingdom, .menu-foot { position: relative; z-index: 2; }
 .menu-bg { position: absolute; inset: 0; opacity: .35; pointer-events: none; }
 .menu-bg .fhex { position: absolute; font-size: 42px; animation: floaty 9s ease-in-out infinite; }
 @keyframes floaty { 0%,100% { transform: translateY(0) rotate(0) } 50% { transform: translateY(-26px) rotate(12deg) } }
@@ -274,7 +277,7 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 .hot-e { stroke: #ffe7a3; stroke-width: 11; stroke-linecap: round; opacity: .9; animation: hotFade 2.4s ease-in-out infinite; pointer-events: none; }
 @keyframes hotPulse { 50% { transform: scale(.7); opacity: .6 } }
 @keyframes hotFade { 50% { opacity: .55 } }
-.hit, .hit-e { fill: transparent; stroke: transparent; cursor: pointer; }
+.hit, .hit-e { fill: rgba(255, 231, 163, 0.42); stroke: #1a1c2c; stroke-width: 3; cursor: pointer; }
 .hit-e { stroke-width: 26; stroke-linecap: round; }
 .hit:hover + *, .hit:hover, .hit:active + *, .hit:active { fill: rgba(255,255,255,.25); }
 .hit-e:hover, .hit-e:active { stroke: rgba(255,255,255,.3); }
