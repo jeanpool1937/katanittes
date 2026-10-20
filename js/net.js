@@ -74,22 +74,30 @@ const PUBLIC_TURN = [
 ];
 let iceList = null;
 
+function pageQuery() {
+  try { return new URLSearchParams(location.search); } catch { return new URLSearchParams(); }
+}
+
 function brokerFromPage() {
-  try {
-    const q = new URLSearchParams(location.search);
-    const host = q.get('peerHost');
-    if (!host) return {};
-    const port = +(q.get('peerPort') || (location.protocol === 'https:' ? 443 : 80));
-    const path = q.get('peerPath') || '/';
-    const secure = q.has('peerSecure') ? q.get('peerSecure') !== '0' : location.protocol === 'https:';
-    return { host, port, path, secure, key: q.get('peerKey') || 'peerjs' };
-  } catch {
-    return {};
-  }
+  const q = pageQuery();
+  const host = q.get('peerHost');
+  if (!host) return {};
+  const port = +(q.get('peerPort') || (location.protocol === 'https:' ? 443 : 80));
+  const path = q.get('peerPath') || '/';
+  const secure = q.has('peerSecure') ? q.get('peerSecure') !== '0' : location.protocol === 'https:';
+  return { host, port, path, secure, key: q.get('peerKey') || 'peerjs' };
+}
+
+function connectWaitMs() {
+  const n = +(pageQuery().get('peerWait') || 0);
+  return n > 0 ? n : 20000;
 }
 
 function peerOptions() {
+  const q = pageQuery();
+  const localIce = q.get('ice') === 'local' || (q.get('peerHost') && /^(localhost|127\.|::1)/.test(q.get('peerHost')));
   iceList ||= (async () => {
+    if (localIce) return [{ urls: 'stun:stun.l.google.com:19302' }];
     let extra = [];
     if (METERED_APP && METERED_KEY) {
       try {
@@ -103,7 +111,7 @@ function peerOptions() {
     }
     return [...STUN, ...PUBLIC_TURN, ...extra];
   })();
-  return iceList.then(iceServers => ({ ...brokerFromPage(), config: { iceServers, iceTransportPolicy: 'all' } }));
+  return iceList.then(iceServers => ({ ...brokerFromPage(), debug: q.get('peerDebug') === '1' ? 2 : 0, config: { iceServers, iceTransportPolicy: 'all' } }));
 }
 
 export function myToken() {
@@ -629,15 +637,16 @@ export class Net {
     return new Promise((res, rej) => {
       const c = this.peer.connect(PREFIX + this.code, { reliable: true });
       const timer = setTimeout(() => {
-        if (first && !this.everConnected) rej(new Error(t(CONNECT_HINT)));
-        else {
-          try {
-            c.close();
-          } catch {}
-          this.retry();
+        if (first && !this.everConnected) {
+          rej(new Error(t(CONNECT_HINT)));
+          return;
         }
+        try {
+          c.close();
+        } catch {}
+        this.retry();
         res();
-      }, 12000);
+      }, connectWaitMs());
       c.on('open', () => {
         clearTimeout(timer);
         this.conn = c;

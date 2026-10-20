@@ -16,14 +16,17 @@
   --display: 'Fredoka', 'Nunito', system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; max-width: 100%; overflow-x: hidden; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; height: 100%; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
 body {
+  min-height: 100%;
+  height: auto;
   background: radial-gradient(1200px 800px at 20% 0%, #1d3561 0%, var(--bg) 60%) fixed, var(--bg);
   color: var(--text);
   font-family: var(--font);
   font-size: 15px;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 button { font-family: inherit; }
 .hidden { display: none !important; }
@@ -185,12 +188,31 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 .waiting { color: var(--muted); font-weight: 700; display: flex; gap: 8px; align-items: center; }
 
 @media (max-width: 860px) {
-  .game { height: auto; min-height: 100dvh; grid-template-rows: auto auto auto; }
-  .game-main { grid-template-columns: 1fr; }
-  .board-wrap { height: min(58vh, 56dvh); min-height: 220px; }
-  .side { border-left: 0; }
-  .log { max-height: 140px; }
-  .players { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .game { height: auto; min-height: 100dvh; grid-template-rows: auto auto auto; overflow: visible; }
+  .game-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    min-height: unset;
+    overflow: visible;
+  }
+  .board-wrap { height: min(52vh, 48dvh); min-height: 200px; }
+  .game[data-players="5"] .board-wrap,
+  .game[data-players="6"] .board-wrap { height: min(42vh, 380px); min-height: 180px; }
+  .side {
+    border-left: 0;
+    min-height: min-content;
+    height: auto;
+    overflow: visible;
+    flex: none;
+  }
+  .log { max-height: 110px; flex: none; min-height: 0; }
+  .players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    height: auto;
+    overflow: visible;
+    flex: none;
+    min-height: min-content;
+  }
   .players.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 8px; }
   .actionbar { position: sticky; bottom: 0; background: #0a1222; padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
   .actions { margin-left: 0; gap: 6px; }
@@ -206,12 +228,12 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
   .start-bar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (max-width: 860px) and (orientation: landscape) {
-  .game { height: 100dvh; grid-template-rows: auto minmax(0, 1fr) auto; }
-  .game-main { grid-template-columns: minmax(0, 1fr) minmax(160px, 32vw); }
+  .game { height: 100dvh; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
+  .game-main { grid-template-columns: minmax(0, 1fr) minmax(180px, 36vw); min-height: 0; }
   .board-wrap { height: auto; min-height: 0; }
-  .players { grid-template-columns: 1fr; overflow-y: auto; }
+  .players { grid-template-columns: 1fr; overflow-y: auto; flex: 1; min-height: 0; }
   .players.compact { grid-template-columns: 1fr; }
-  .log { max-height: 80px; }
+  .log { max-height: 72px; }
   .side { min-height: 0; overflow: auto; }
 }
 

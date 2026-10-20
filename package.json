@@ -8,5 +8,9 @@
     "test:e2e": "playwright test --config tests/e2e/playwright.config.mjs",
     "sim": "node tests/sim.mjs",
     "i18n": "node tools/i18n.mjs check"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "peer": "^1.0.2"
   }
 }

@@ -3,7 +3,7 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
-artifacts/
+artifacts/guest-fail-*.png
 .claude/*
 !.claude/commands/
 !.claude/hooks/

@@ -127,7 +127,7 @@ function menuScreen(root) {
         h('a', { class: 'btn', href: 'showcase/trailer.html', style: { textDecoration: 'none', flex: 1 } }, t('🎞️ Tráiler')),
         h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none', flex: 1 } }, t('🎬 Showcase')))),
     h('div', { class: 'menu-foot' }, t('Hecho para jugar con amigos · funciona en PC y móvil · sin instalar nada'), creditLine())));
-  menuDiorama(dio);
+  if (!new URLSearchParams(location.search).get('gfx')) menuDiorama(dio);
 }
 
 async function quickBots() {
@@ -153,7 +153,7 @@ function onlineScreen(root) {
   const dio = h('div', { class: 'menu-bg3d' });
   const inner = h('div', { class: 'hub-inner' });
   root.append(h('div', { class: 'online-hub screen' }, dio, inner));
-  menuDiorama(dio);
+  if (!params.get('gfx')) menuDiorama(dio);
   const kingdom = myOrDefaultKingdom;
   let capacity = DEFAULT_CAPACITY;
   let busy = false;

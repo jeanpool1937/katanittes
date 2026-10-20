@@ -1,4 +1,8 @@
 import { defineConfig } from '@playwright/test';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   testDir: '.',
@@ -14,11 +18,13 @@ export default defineConfig({
     locale: 'es-ES',
     trace: 'off',
     actionTimeout: 15_000,
+    screenshot: 'off',
   },
   webServer: {
-    command: 'python3 -m http.server 8123 --bind 127.0.0.1',
+    command: 'node static-server.mjs',
+    cwd: here,
     url: 'http://127.0.0.1:8123/',
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 15_000,
   },
 });

@@ -78,7 +78,7 @@ input[type=range] { accent-color: var(--sand); }
 .on > .switch, .switch.on { background: var(--coral); }
 
 /* ---------- menu ---------- */
-.menu-bg3d { position: absolute; inset: 0; }
+.menu-bg3d { position: absolute; inset: 0; pointer-events: none; }
 .menu-bg3d::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(26,28,44,.15) 0%, rgba(26,28,44,.75) 70%); pointer-events: none; }
 .menu-bg3d .board-3d { width: 100%; height: 100%; }
 .logo .t1 { font-family: var(--display); font-size: clamp(64px, 13vw, 140px); letter-spacing: 6px; background: none; color: var(--sand); -webkit-background-clip: initial; background-clip: initial; filter: none;
@@ -110,6 +110,7 @@ input[type=range] { accent-color: var(--sand); }
 .brand i { color: var(--white); }
 .turn-dot { box-shadow: 0 0 0 3px var(--ink); }
 .side { background: #1f2440; border-left: 0; box-shadow: inset 3px 0 0 var(--sand), inset 6px 0 0 var(--ink); padding-left: 6px; }
+.pcard { flex: none; }
 .log { border-top: 0; box-shadow: inset 0 3px 0 var(--ink); font-size: 14px; }
 .log div { border-bottom: 1px dotted rgba(148,176,194,.18); }
 .actionbar { background: var(--ink); border-top: 0; box-shadow: 0 -3px 0 var(--sand), 0 -6px 0 var(--ink); }
@@ -518,6 +519,7 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
   .players.compact .pcard .stats { gap: 4px; font-size: 11px; }
   .players.compact .pcard .vp { font-size: 18px; }
   .pcard .name { font-size: 13px; }
+  .side { padding: 4px 4px 8px; }
   .emote-grid { grid-template-columns: repeat(4, 1fr); }
   .emote-btn { min-height: 44px; font-size: 26px; }
   .offer { width: min(460px, calc(100% - 12px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }

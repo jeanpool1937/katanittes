@@ -53,7 +53,7 @@ export function gameScreen(root) {
       h('button', { class: 'btn', title: t('Centrar'), onclick: () => ui.board && ui.board.resetView() }, '⤢')));
   root.append(h('div', { class: 'game screen', 'data-testid': 'game-screen' },
     topbar,
-    h('main', { class: 'game-main' }, boardWrap, h('aside', { class: 'side' }, els.players, els.bank, els.log)),
+    h('main', { class: 'game-main' }, boardWrap, h('aside', { class: 'side', 'data-testid': 'side' }, els.players, els.bank, els.log)),
     els.actionbar), els.overlay, els.pass);
   ui = {
     els, pick: null, modal: null, draft: null, unlockedFor: null, rolledAt: 0, rolled: null,
