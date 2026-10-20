@@ -9,19 +9,15 @@ import { openFlagEditor, flagImg, myKingdom, saveMyKingdom, patternFlag } from '
 import { autoPixelize } from './ui/pixel.js';
 import { t, LANGS, lang, setLang } from './i18n.js';
 
-// WebGL on a full-screen canvas behind the menu steals taps on phones
-// (compositor layer + touch-action:none), even when the parent has pointer-events:none.
+// A full-screen WebGL canvas behind the menu steals taps AND mouse clicks
+// (GPU compositor layer + touch-action:none). pointer-events:none on the parent
+// is not enough. The island is decorative — only mount it with ?gfx=3d.
 function wantMenuDiorama() {
   try {
-    const q = new URLSearchParams(location.search);
-    const gfx = q.get('gfx');
-    if (gfx === 'off' || gfx === 'flat' || gfx === '2d') return false;
-    if (gfx === '3d') return true;
-    if (window.matchMedia('(pointer: coarse)').matches) return false;
-    if (Math.min(innerWidth, innerHeight) < 700) return false;
-    if ((navigator.maxTouchPoints || 0) > 0 && innerWidth < 900) return false;
-  } catch {}
-  return true;
+    return new URLSearchParams(location.search).get('gfx') === '3d';
+  } catch {
+    return false;
+  }
 }
 
 // live 3D island slowly orbiting behind the title (desktop only; phones skip it)

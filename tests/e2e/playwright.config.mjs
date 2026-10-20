@@ -32,6 +32,11 @@ export default defineConfig({
       testMatch: 'mobile-taps.spec.js',
       use: { ...devices['iPhone 13'], locale: 'es-ES', hasTouch: true, isMobile: true },
     },
+    {
+      name: 'chromium-desktop',
+      testMatch: 'mobile-taps.spec.js',
+      use: { viewport: { width: 1280, height: 800 }, locale: 'es-ES', hasTouch: false, isMobile: false },
+    },
   ],
   webServer: {
     command: 'node static-server.mjs',
