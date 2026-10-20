@@ -15,6 +15,7 @@ import { t, tk, tx } from './i18n.js';
 const PREFIX = 'kchx-v1-';
 export const HOST_SESSION = 'katanittes.hostSession';
 export const GUEST_SESSION = 'katanittes.guestSession';
+export const DEFAULT_CAPACITY = 6;
 const TOKEN_KEY = 'katanittes.token';
 const GRACE_MS = 12000; // time to come back before the table votes
 const PING_MS = 3000, DEAD_MS = 10000; // heartbeat: abrupt signal loss is noticed in ~10s
@@ -23,28 +24,94 @@ const WAIT_MS = 60000; // a "wait" result gives this much extra time
 const ADMIN = new Set(['retirePlayer', 'setController']);
 let peerLib = null;
 
-// TURN relay for friends whose network blocks direct P2P (CGNAT, mobile data, campus wifi).
-// PeerJS's bundled TURN hosts no longer resolve, so without our own relay those players can't join.
+export const CONNECT_HINT = tk('La sala existe pero no se pudo conectar. En datos móviles (4G/5G) o redes con NAT estricto hace falta un relé TURN. Prueba: 1) la misma wifi que el anfitrión, 2) datos ↔ wifi al revés, 3) un teléfono como hotspot. Si nada funciona, la red está bloqueando WebRTC.');
+
+export function roomCodeFromSearch(search) {
+  try {
+    const p = new URLSearchParams(search ?? (typeof location !== 'undefined' ? location.search : ''));
+    return String(p.get('room') || p.get('sala') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+  } catch {
+    return '';
+  }
+}
+
+export function roomShareUrl(code) {
+  const origin = typeof location !== 'undefined' ? location.origin : '';
+  const path = typeof location !== 'undefined' ? location.pathname : '/';
+  return origin + path + '?room=' + encodeURIComponent(code);
+}
+
+export function rememberRoomInUrl(code) {
+  if (typeof history === 'undefined' || !code) return;
+  try {
+    const u = new URL(location.href);
+    u.searchParams.delete('sala');
+    u.searchParams.set('room', code);
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+  } catch {}
+}
+
+// ICE: STUN for easy NATs, plus free public TURN so phones on 4G/CGNAT can still join.
+// PeerJS `config` *replaces* its defaults, so we list STUN + TURN ourselves.
+// These TURN logins are published by the operators (not app secrets). They can go down
+// or rate-limit; Metered (optional, no key shipped) can be filled in below.
 // Free key: dashboard.metered.ca → TURN Server → create app → API key.
 const METERED_APP = ''; // "<app>" in <app>.metered.live
 const METERED_KEY = '';
-const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
+const STUN = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'stun:freeturn.net:3478' },
+];
+const PUBLIC_TURN = [
+  { urls: 'turn:0.peerjs.com:3478', username: 'peerjs', credential: 'peerjsp' },
+  { urls: 'turn:eu-0.turn.peerjs.com:3478', username: 'peerjs', credential: 'peerjsp' },
+  { urls: 'turn:freeturn.net:3478', username: 'free', credential: 'free' },
+  { urls: 'turn:freeturn.net:3478?transport=tcp', username: 'free', credential: 'free' },
+  { urls: 'turns:freeturn.net:5349', username: 'free', credential: 'free' },
+  { urls: 'turns:freeturn.tel:5349', username: 'free', credential: 'free' },
+];
 let iceList = null;
+
+function pageQuery() {
+  try { return new URLSearchParams(location.search); } catch { return new URLSearchParams(); }
+}
+
+function brokerFromPage() {
+  const q = pageQuery();
+  const host = q.get('peerHost');
+  if (!host) return {};
+  const port = +(q.get('peerPort') || (location.protocol === 'https:' ? 443 : 80));
+  const path = q.get('peerPath') || '/';
+  const secure = q.has('peerSecure') ? q.get('peerSecure') !== '0' : location.protocol === 'https:';
+  return { host, port, path, secure, key: q.get('peerKey') || 'peerjs' };
+}
+
+function connectWaitMs() {
+  const n = +(pageQuery().get('peerWait') || 0);
+  return n > 0 ? n : 20000;
+}
+
 function peerOptions() {
+  const q = pageQuery();
+  const localIce = q.get('ice') === 'local' || (q.get('peerHost') && /^(localhost|127\.|::1)/.test(q.get('peerHost')));
   iceList ||= (async () => {
-    if (!METERED_APP || !METERED_KEY) return STUN;
-    try {
-      const r = await fetch(`https://${METERED_APP}.metered.live/api/v1/turn/credentials?apiKey=${METERED_KEY}`);
-      const turn = await r.json();
-      if (!r.ok || !Array.isArray(turn)) throw new Error('TURN ' + r.status);
-      return [...STUN, ...turn];
-    } catch (e) {
-      console.warn('Sin TURN, solo P2P directo:', e);
-      iceList = null;
-      return STUN;
+    if (localIce) return [{ urls: 'stun:stun.l.google.com:19302' }];
+    let extra = [];
+    if (METERED_APP && METERED_KEY) {
+      try {
+        const r = await fetch(`https://${METERED_APP}.metered.live/api/v1/turn/credentials?apiKey=${METERED_KEY}`);
+        const turn = await r.json();
+        if (!r.ok || !Array.isArray(turn)) throw new Error('TURN ' + r.status);
+        extra = turn;
+      } catch (e) {
+        console.warn('Metered TURN no disponible, uso relés públicos:', e);
+      }
     }
+    return [...STUN, ...PUBLIC_TURN, ...extra];
   })();
-  return iceList.then(iceServers => ({ config: { iceServers } }));
+  return iceList.then(iceServers => ({ ...brokerFromPage(), debug: q.get('peerDebug') === '1' ? 2 : 0, config: { iceServers, iceTransportPolicy: 'all' } }));
 }
 
 export function myToken() {
@@ -56,18 +123,30 @@ export function myToken() {
   return t;
 }
 
+const PEER_SRCS = [
+  'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
+  'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js',
+];
 function loadPeer() {
   if (peerLib) return peerLib;
   peerLib = new Promise((res, rej) => {
     if (window.Peer) return res(window.Peer);
-    const sc = document.createElement('script');
-    sc.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
-    sc.onload = () => res(window.Peer);
-    sc.onerror = () => {
-      peerLib = null;
-      rej(new Error(t('No se pudo cargar PeerJS')));
+    const next = i => {
+      if (i >= PEER_SRCS.length) {
+        peerLib = null;
+        rej(new Error(t('No se pudo cargar PeerJS')));
+        return;
+      }
+      const sc = document.createElement('script');
+      sc.src = PEER_SRCS[i];
+      sc.onload = () => res(window.Peer);
+      sc.onerror = () => {
+        sc.remove();
+        next(i + 1);
+      };
+      document.head.append(sc);
     };
-    document.head.append(sc);
+    next(0);
   });
   return peerLib;
 }
@@ -107,7 +186,7 @@ export class Net {
     this.onChange = () => {};
     this.timers = new Map();
     // room settings (host) / what the waiting room shows (guest)
-    this.capacity = 4;
+    this.capacity = DEFAULT_CAPACITY;
     this.open = true;
     this.hostInfo = { name: t('Anfitrión'), flag: null, color: '#e53935' };
     this.lobby = null;
@@ -195,7 +274,8 @@ export class Net {
         if (attempt >= (reopening ? 24 : 3)) throw e;
       }
     }
-    if (!this.peer) throw new Error(t('No se pudo abrir la sala'));
+    if (!this.peer) throw new Error(t('No se pudo abrir la sala. ¿Sin conexión, o el servidor de emparejamiento no responde?'));
+    rememberRoomInUrl(this.code);
     clearInterval(this.hb);
     this.hb = setInterval(() => {
       const now = Date.now();
@@ -544,7 +624,12 @@ export class Net {
         p.on('error', e => {
           if (e.type === 'peer-unavailable') {
             if (first && !this.everConnected) rej(new Error(t('No existe una sala con ese código')));
-          } else if (!this.everConnected && first) rej(new Error(t('Error de red: {type}', { type: e.type })));
+          } else if (!this.everConnected && first) {
+            const hint = e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error'
+              ? t('No se pudo hablar con el servidor de emparejamiento ({type}). Revisa la conexión e inténtalo de nuevo.', { type: e.type })
+              : t('Error de red: {type}', { type: e.type });
+            rej(new Error(hint));
+          }
         });
         p.on('disconnected', () => this.active && !p.destroyed && setTimeout(() => p.reconnect(), 1500));
       });
@@ -552,15 +637,16 @@ export class Net {
     return new Promise((res, rej) => {
       const c = this.peer.connect(PREFIX + this.code, { reliable: true });
       const timer = setTimeout(() => {
-        if (first && !this.everConnected) rej(new Error(t('La sala existe pero no se pudo conectar: tu red bloquea la conexión directa. Prueba con otra wifi o con datos móviles.')));
-        else {
-          try {
-            c.close();
-          } catch {}
-          this.retry();
+        if (first && !this.everConnected) {
+          rej(new Error(t(CONNECT_HINT)));
+          return;
         }
+        try {
+          c.close();
+        } catch {}
+        this.retry();
         res();
-      }, 12000);
+      }, connectWaitMs());
       c.on('open', () => {
         clearTimeout(timer);
         this.conn = c;

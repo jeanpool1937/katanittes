@@ -663,4 +663,12 @@ export default {
   "🫳 ¿A quién le robas?": "🫳 Wen beraubst du?",
   "Amigo {n}": "Freund {n}",
   "Jugador {n}": "Spieler {n}",
+  "La sala existe pero no se pudo conectar. En datos móviles (4G/5G) o redes con NAT estricto hace falta un relé TURN. Prueba: 1) la misma wifi que el anfitrión, 2) datos ↔ wifi al revés, 3) un teléfono como hotspot. Si nada funciona, la red está bloqueando WebRTC.": "Der Raum existiert, aber die Verbindung klappt nicht. Im Mobilfunk (4G/5G) oder bei strengem NAT braucht es ein TURN-Relais. Versuch: 1) dasselbe WLAN wie der Gastgeber, 2) Daten ↔ WLAN tauschen, 3) einen Hotspot. Wenn nichts geht, blockiert das Netz WebRTC.",
+  "No se pudo abrir la sala. ¿Sin conexión, o el servidor de emparejamiento no responde?": "Raum konnte nicht geöffnet werden. Offline, oder der Vermittlungsserver antwortet nicht?",
+  "No se pudo hablar con el servidor de emparejamiento ({type}). Revisa la conexión e inténtalo de nuevo.": "Der Vermittlungsserver ist nicht erreichbar ({type}). Verbindung prüfen und erneut versuchen.",
+  "Hasta 6 (o 8) en el móvil · código o enlace · sin cuentas": "Bis zu 6 (oder 8) am Handy · Code oder Link · ohne Konto",
+  "🗺️ Con 5-6 jugadores uso el mapa extendido (30 hexágonos).": "🗺️ Bei 5–6 Spielern nutze ich die erweiterte Karte (30 Hexfelder).",
+  "🚪 Unirse a la sala {code}": "🚪 Raum {code} beitreten",
+  "Pon tu nombre y entra. El anfitrión te está esperando.": "Namen eintragen und eintreten. Der Gastgeber wartet.",
+  "📡 WebRTC entre teléfonos (con relé TURN si hace falta)": "📡 WebRTC zwischen Handys (mit TURN-Relais falls nötig)",
 };

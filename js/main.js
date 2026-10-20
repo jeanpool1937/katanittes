@@ -4,7 +4,7 @@ import { lobbyScreen } from './ui/lobby.js';
 import { gameScreen } from './ui/gameView.js';
 import { editorScreen, decodeMap } from './ui/editor.js';
 import { showHelp, creditLine } from './ui/help.js';
-import { Net, HOST_SESSION, GUEST_SESSION } from './net.js';
+import { Net, HOST_SESSION, GUEST_SESSION, DEFAULT_CAPACITY, roomCodeFromSearch } from './net.js';
 import { openFlagEditor, flagImg, myKingdom, saveMyKingdom, patternFlag } from './ui/flag.js';
 import { autoPixelize } from './ui/pixel.js';
 import { t, LANGS, lang, setLang } from './i18n.js';
@@ -119,7 +119,7 @@ function menuScreen(root) {
         h('button', { class: 'btn ghost', title: t('Cerrar esa sala para siempre'), onclick: () => { storage(HOST_SESSION, null); App.go('menu'); } }, '✕')) : null,
       guestSess ? h('button', { class: 'btn green', onclick: () => backToRoom(guestSess) }, t('📡 Volver a la sala {code}', { code: guestSess.code })) : null,
       h('button', { class: 'btn primary', onclick: () => App.go('lobby') }, t('🎮 Jugar local (hotseat + bots)')),
-      h('button', { class: 'btn pink', onclick: () => App.go('online') }, t('🌐 Jugar online con amigos')),
+      h('button', { class: 'btn pink', 'data-testid': 'play-online', onclick: () => App.go('online') }, t('🌐 Jugar online con amigos')),
       h('button', { class: 'btn', onclick: () => App.go('editor') }, t('✏️ Editor de mapas')),
       h('button', { class: 'btn', onclick: () => quickBots() }, t('👀 Ver una partida de bots')),
       h('button', { class: 'btn', onclick: () => showHelp() }, t('📖 Cómo se juega')),
@@ -127,7 +127,7 @@ function menuScreen(root) {
         h('a', { class: 'btn', href: 'showcase/trailer.html', style: { textDecoration: 'none', flex: 1 } }, t('🎞️ Tráiler')),
         h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none', flex: 1 } }, t('🎬 Showcase')))),
     h('div', { class: 'menu-foot' }, t('Hecho para jugar con amigos · funciona en PC y móvil · sin instalar nada'), creditLine())));
-  menuDiorama(dio);
+  if (!new URLSearchParams(location.search).get('gfx')) menuDiorama(dio);
 }
 
 async function quickBots() {
@@ -153,14 +153,16 @@ function onlineScreen(root) {
   const dio = h('div', { class: 'menu-bg3d' });
   const inner = h('div', { class: 'hub-inner' });
   root.append(h('div', { class: 'online-hub screen' }, dio, inner));
-  menuDiorama(dio);
+  if (!params.get('gfx')) menuDiorama(dio);
   const kingdom = myOrDefaultKingdom;
-  let capacity = 4;
+  let capacity = DEFAULT_CAPACITY;
   let busy = false;
+  const invited = roomCodeFromSearch(params);
+  let autoTried = false;
 
   const header = () => h('div', { class: 'hub-head' },
     h('button', { class: 'btn', onclick: () => { if (App.net) { App.net.close(); App.net = null; } App.go('menu'); } }, t('← Menú')),
-    h('div', null, h('h2', { class: 'jit' }, t('🌐 Jugar con amigos')), h('div', { class: 'hub-sub' }, t('Hasta 8 reinos · sin cuentas · sin instalar nada'))));
+    h('div', null, h('h2', { class: 'jit' }, t('🌐 Jugar con amigos')), h('div', { class: 'hub-sub' }, t('Hasta 6 (o 8) en el móvil · código o enlace · sin cuentas'))));
 
   function draw() {
     App.onLobby = draw;
@@ -196,15 +198,16 @@ function onlineScreen(root) {
       });
       return b;
     });
-    const pre = (params.get('sala') || '').toUpperCase();
+    const pre = (invited || roomCodeFromSearch(params) || '').toUpperCase();
     [...pre.slice(0, 5)].forEach((c, j) => (boxes[j].value = c));
-    const status = h('div', { class: 'hub-status' });
+    const status = h('div', { class: 'hub-status', 'data-testid': 'hub-status' });
     const recent = (storage(RECENT_KEY) || []).filter(r => Date.now() - r.at < 7 * 864e5);
 
     async function host() {
       if (busy) return;
       const n = saveName() || t('Anfitrión');
       busy = true;
+      status.classList.remove('error');
       status.textContent = t('⏳ Abriendo tu sala...');
       try {
         App.net = new Net();
@@ -218,6 +221,7 @@ function onlineScreen(root) {
       } catch (e) {
         App.net = null;
         status.textContent = '❌ ' + e.message;
+        status.classList.add('error');
       }
       busy = false;
     }
@@ -232,6 +236,7 @@ function onlineScreen(root) {
       }
       if (code.length < 5) return toast(t('El código tiene 5 letras'), 'error');
       busy = true;
+      status.classList.remove('error');
       status.textContent = t('⏳ Buscando la sala {code}...', { code });
       try {
         App.net = new Net();
@@ -245,6 +250,7 @@ function onlineScreen(root) {
       } catch (e) {
         App.net = null;
         status.textContent = '❌ ' + e.message;
+        status.classList.add('error');
       }
       busy = false;
     }
@@ -263,21 +269,27 @@ function onlineScreen(root) {
           h('h3', null, t('👑 Crear sala')),
           h('p', null, t('Tú eliges el mapa y los modos. Tu navegador hace de servidor: déjalo abierto mientras juegan.')),
           h('div', { class: 'section-label' }, t('¿Cuántos jugadores?')),
-          h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (n === capacity ? ' on' : ''), onclick: () => { capacity = n; draw(); } }, n))),
+          h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (n === capacity ? ' on' : ''), 'data-cap': n, onclick: () => { capacity = n; draw(); } }, n))),
           h('div', { class: 'cap-people' }, Array.from({ length: capacity }, (_, i) => h('span', { class: i === 0 ? 'me' : '' }, i === 0 ? '👑' : '🧑'))),
-          h('button', { class: 'btn primary big', onclick: host }, t('✨ Crear sala'))),
+          capacity >= 5 ? h('p', { class: 'hub-map-hint' }, t('🗺️ Con 5-6 jugadores uso el mapa extendido (30 hexágonos).')) : null,
+          h('button', { class: 'btn primary big', 'data-testid': 'create-room', onclick: host }, t('✨ Crear sala'))),
         h('div', { class: 'card hub-card join-card' },
-          h('h3', null, t('🚪 Unirse')),
-          h('p', null, t('Pide el código de 5 letras al anfitrión (o entra con su enlace).')),
+          h('h3', null, invited ? t('🚪 Unirse a la sala {code}', { code: invited }) : t('🚪 Unirse')),
+          h('p', null, invited ? t('Pon tu nombre y entra. El anfitrión te está esperando.') : t('Pide el código de 5 letras al anfitrión (o entra con su enlace).')),
           h('div', { class: 'pins' }, boxes),
-          h('button', { class: 'btn pink big', onclick: () => join() }, t('🚀 Entrar')),
+          h('button', { class: 'btn pink big', 'data-testid': 'join-room', onclick: () => join() }, t('🚀 Entrar')),
           recent.length ? h('div', null, h('div', { class: 'section-label' }, t('Salas recientes')), h('div', { class: 'chips' }, recent.map(r => h('button', { class: 'chip', onclick: () => join(r.code) }, '↩ ' + r.code)))) : null)),
       status,
       h('div', { class: 'hub-tips' },
-        h('span', null, t('📡 Conexión directa entre navegadores')),
+        h('span', null, t('📡 WebRTC entre teléfonos (con relé TURN si hace falta)')),
         h('span', null, t('🔁 Si se te cae la señal, vuelves a tu asiento')),
         h('span', null, t('🗳️ Si alguien se va, la mesa vota'))));
     if (pre && !boxes[4].value) boxes[pre.length] && boxes[pre.length].focus();
+    // a ?room= / ?sala= link with a saved name opens straight into that lobby
+    if (invited && invited.length === 5 && !autoTried && (saveName() || nameIn.value.trim())) {
+      autoTried = true;
+      setTimeout(() => join(invited), 50);
+    }
   }
 
   function drawWaiting(net) {
@@ -285,12 +297,12 @@ function onlineScreen(root) {
     const seats = [{ ...L.host, host: true }, ...L.players];
     const me = storage('katanittes.name');
     inner.replaceChildren(header(),
-      h('div', { class: 'card hub-card waiting-card' },
-        h('h3', null, t('🏰 Sala '), h('span', { class: 'room-code inline' }, L.code || net.code), h('span', { class: 'room-state ' + (L.open ? 'on' : 'off') }, L.open ? t('abierta') : t('cerrada'))),
+      h('div', { class: 'card hub-card waiting-card', 'data-testid': 'waiting-room' },
+        h('h3', null, t('🏰 Sala '), h('span', { class: 'room-code inline', 'data-testid': 'room-code' }, L.code || net.code), h('span', { class: 'room-state ' + (L.open ? 'on' : 'off') }, L.open ? t('abierta') : t('cerrada'))),
         h('p', { class: 'waiting-msg jit' }, t('⏳ Esperando a que el anfitrión empiece la partida...')),
-        h('div', { class: 'section-label' }, t('Reinos en la sala {n} / {max}', { n: seats.length, max: L.capacity })),
-        h('div', { class: 'seat-grid' },
-          seats.map(p => h('div', { class: 'seat' + (p.host ? ' host' : '') + (p.name === me ? ' me' : '') },
+        h('div', { class: 'section-label', 'data-testid': 'lobby-count' }, t('Reinos en la sala {n} / {max}', { n: seats.length, max: L.capacity })),
+        h('div', { class: 'seat-grid', 'data-testid': 'seat-grid' },
+          seats.map(p => h('div', { class: 'seat' + (p.host ? ' host' : '') + (p.name === me ? ' me' : ''), 'data-testid': 'seat' },
             h('div', { class: 'hub-flag small' }, h('div', { class: 'pole' }), flagImg(p.flag, 40, 'flag-img wave')),
             h('b', null, p.name), h('small', null, p.host ? t('👑 anfitrión') : p.name === me ? t('tú') : t('listo')))),
           Array.from({ length: Math.max(0, L.capacity - seats.length) }, () => h('div', { class: 'seat empty' }, h('div', { class: 'seat-q' }, '?'), h('small', null, t('libre'))))),
@@ -314,5 +326,5 @@ if (params.get('mapa')) {
   } catch {
     App.go('menu');
   }
-} else if (params.get('sala')) App.go('online');
+} else if (params.get('sala') || params.get('room')) App.go('online');
 else App.go('menu');

@@ -781,7 +781,12 @@ export class Board3D {
     this.floaters = [];
 
     this.controls = new OrbitControls(this.camera, this.canvas);
-    Object.assign(this.controls, { enableDamping: true, dampingFactor: 0.08, maxPolarAngle: 1.15, minPolarAngle: 0.3, minDistance: 3, maxDistance: 50, screenSpacePanning: false });
+    Object.assign(this.controls, { enableDamping: true, dampingFactor: 0.08, maxPolarAngle: 1.15, minPolarAngle: 0.3, minDistance: 3, maxDistance: 50, screenSpacePanning: true });
+    // phone: one finger pans the island, pinch zooms / twists — rotate stays on two fingers
+    if (THREE.TOUCH) {
+      this.controls.touches.ONE = THREE.TOUCH.PAN;
+      this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
+    }
     // middle button = drop a 1 s marker there (zoom stays on the wheel)
     this.controls.mouseButtons.MIDDLE = -1;
     this.canvas.addEventListener('pointerdown', e => {
@@ -1961,6 +1966,10 @@ export class Board3D {
       const mk = (id, x, y, z, cls) => {
         const el = document.createElement('button');
         el.className = 'hot3d ' + cls;
+        el.type = 'button';
+        el.dataset.testid = 'spot';
+        el.dataset.spot = cls.charAt(0) + id;
+        el.setAttribute('aria-label', 'spot');
         el.style.setProperty('--pc', inter.color || '#fff');
         el.addEventListener('pointerdown', e => e.stopPropagation());
         el.addEventListener('click', e => {

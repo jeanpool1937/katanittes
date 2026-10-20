@@ -8,6 +8,7 @@ import { createGame } from '../engine/game.js';
 import { newSeed } from '../engine/rng.js';
 import { openFlagEditor, flagImg, patternFlag, validFlag, myKingdom, saveMyKingdom } from './flag.js';
 import { t } from '../i18n.js';
+import { roomShareUrl } from '../net.js';
 
 const CFG_KEY = 'katanittes.lastConfig';
 export const MAPS_KEY = 'katanittes.maps';
@@ -76,7 +77,7 @@ export function lobbyScreen(root, opts = {}) {
       h('div', { class: 'preview-card' }, onlineBox, h('div', { class: 'card' },
         h('h3', null, t('🗺️ Vista previa '), h('small', null, t('así será tu mapa'))),
         previewBox, previewMeta)))),
-    h('div', { class: 'start-bar' }, h('button', { class: 'btn primary big', id: 'startBtn', onclick: start }, online ? t('🚀 Empezar partida online') : t('🚀 ¡A jugar!'))));
+    h('div', { class: 'start-bar' }, h('button', { class: 'btn primary big', id: 'startBtn', 'data-testid': 'start-game', onclick: start }, online ? t('🚀 Empezar partida online') : t('🚀 ¡A jugar!'))));
 
   function save() {
     storage(CFG_KEY, cfg);
@@ -141,23 +142,23 @@ export function lobbyScreen(root, opts = {}) {
     net.pushLobby();
     const guests = connectedGuests();
     const remoteSeats = cfg.players.filter(p => p.kind === 'remote').length;
-    const link = location.origin + location.pathname + '?sala=' + net.code;
+    const link = roomShareUrl(net.code);
     onlineBox.append(h('div', { class: 'card room-card' },
       h('h3', null, t('🌐 Tu sala '), h('span', { class: 'room-state ' + (net.open ? 'on' : 'off') }, net.open ? t('abierta') : t('cerrada'))),
-      net.code ? h('div', { class: 'room-code' }, net.code) : h('p', null, t('Creando sala...')),
+      net.code ? h('div', { class: 'room-code', 'data-testid': 'room-code' }, net.code) : h('p', null, t('Creando sala...')),
       h('div', { class: 'chips room-share' },
         h('button', { class: 'btn sm', onclick: () => copy(link, t('🔗 Enlace copiado: pásaselo a tus amigos')) }, t('🔗 Copiar enlace')),
         h('button', { class: 'btn sm', onclick: () => copy(net.code, t('📋 Código copiado')) }, t('📋 Código')),
         navigator.share ? h('button', { class: 'btn sm', onclick: () => navigator.share({ title: 'Katanittes', text: t('¡Únete a mi sala de Katanittes!'), url: link }).catch(() => {}) }, t('📤 Compartir')) : null),
       h('div', { class: 'section-label' }, t('Tamaño de la sala')),
-      h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (cfg.players.length === n ? ' on' : ''), title: t('{n} jugadores', { n }), onclick: () => setCapacity(n) }, n))),
+      h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (cfg.players.length === n ? ' on' : ''), 'data-cap': n, title: t('{n} jugadores', { n }), onclick: () => setCapacity(n) }, n))),
       h('div', { class: 'gfx-row room-toggles' },
         h('button', { class: 'chip' + (net.open ? ' on' : ''), onclick: () => { net.open = !net.open; renderOnline(); } }, net.open ? t('🟢 Aceptando jugadores') : t('🔒 No entra nadie más')),
         h('button', { class: 'chip' + (fillBots ? ' on' : ''), onclick: () => { fillBots = !fillBots; renderOnline(); } }, t('🤖 Huecos vacíos: bots'))),
-      h('div', { class: 'section-label' }, t('En la sala {n} / {max}', { n: guests.length + 1, max: cfg.players.length })),
-      h('div', { class: 'guest-list' },
-        h('div', { class: 'guest host' }, flagImg(cfg.players[0].flag, 20), h('b', null, cfg.players[0].name), h('span', { class: 'tag ok' }, t('👑 tú'))),
-        guests.map(g => h('div', { class: 'guest' }, flagImg(g.flag, 20), h('b', null, g.name), h('span', { class: 'tag ok' }, t('conectado')),
+      h('div', { class: 'section-label', 'data-testid': 'lobby-count' }, t('En la sala {n} / {max}', { n: guests.length + 1, max: cfg.players.length })),
+      h('div', { class: 'guest-list', 'data-testid': 'guest-list' },
+        h('div', { class: 'guest host', 'data-testid': 'guest' }, flagImg(cfg.players[0].flag, 20), h('b', null, cfg.players[0].name), h('span', { class: 'tag ok' }, t('👑 tú'))),
+        guests.map(g => h('div', { class: 'guest', 'data-testid': 'guest' }, flagImg(g.flag, 20), h('b', null, g.name), h('span', { class: 'tag ok' }, t('conectado')),
           h('button', { class: 'btn sm ghost kick', title: t('Expulsar'), onclick: () => { if (confirm(t('¿Expulsar a {name} de la sala?', { name: g.name }))) net.kick(g.token); } }, '👢'))),
         Array.from({ length: Math.max(0, remoteSeats - guests.length) }, () => h('div', { class: 'guest empty' }, h('span', { class: 'dots' }, '⏳'), fillBots ? t('libre (si nadie entra, juega un bot)') : t('esperando a un amigo')))),
       h('button', { class: 'btn pink sm close-room', onclick: () => { if (confirm(t('¿Cerrar la sala? Tus amigos saldrán.'))) { net.closeRoom(); App.net = null; App.go('menu'); } } }, t('✖ Cerrar sala'))));

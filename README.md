@@ -4,7 +4,9 @@
 
 **A settlers-style board game inspired by Catan that runs in your browser.** Custom maps, game modes the box never had, bots that hate you, online play with friends, a hand-built 3D diorama board with a pixel-art UI, and a gambling-minigame arcade to kill time while everyone else takes their turn (with 100% fake money).
 
-Free, no ads, no accounts, nothing to install. Works on desktop and mobile.
+Free, no ads, no accounts, nothing to install. Works on desktop and **mobile-first** (portrait phones ~360–430px, landscape, add-to-home-screen).
+
+This copy is based on **[Katanittes by Sowtank](https://github.com/KurusuDes/CatanTestFriendos)** (MIT). Original author credit stays in [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), the main menu and the help screen.
 
 | | |
 |---|---|
@@ -73,7 +75,9 @@ Victory points, hand limit, setup rounds, starting bonus, pieces per player, dev
 - **Spectator mode:** watch a bots-only game at the speed you pick.
 
 ### Online with friends
-- **Peer-to-peer** over WebRTC (PeerJS). The host's browser runs the game; there's no game server. Share a short room code or a link.
+- **Peer-to-peer** over WebRTC (PeerJS). The host's browser runs the game; there's no game server.
+- **Up to 6 human players** in one room (host + 5 joiners; rooms can go to 8 with bots). Creating a 5–6 player room switches to the **extended map** (30 hexes).
+- Share a 5-letter code or a link (`?room=XXXX` / `?sala=XXXX`) that opens straight into that lobby on a phone.
 - **Automatic reconnection:** drop out and you get your seat back.
 - When someone disconnects, the table **votes**: wait, let a bot take over, or retire the player.
 - If the host drops, they can **reopen the room** with the same code and carry on.
@@ -126,7 +130,7 @@ A small window of gambling minigames for while you wait for your turn, with **fa
 ## Running it locally
 
 ```bash
-py -m http.server 8123
+python3 -m http.server 8123
 # then open http://localhost:8123/
 ```
 
@@ -136,8 +140,34 @@ Engine tests (rules plus 300 bot-vs-bot games checking invariants):
 npm test
 ```
 
+Six-phone online smoke test (Playwright; starts a local PeerJS broker):
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+## Deploy on Vercel (static, no build)
+
+Import the repo. **Framework preset: Other.** Leave **Build Command** empty and **Output Directory** empty (site is served from the repo root). There is no Node build.
+
+`vercel.json` only sets short cache headers so HTML/JS/CSS update immediately. Relative asset paths (`css/`, `js/`, `icons/`) work at the domain root.
+
+On a phone: Open in Safari/Chrome → Share → **Add to Home Screen** (PWA manifest + icons). No service worker, so a refresh always gets the latest files.
+
+### WebRTC / TURN (phones on 4G)
+
+Signalling uses the public PeerJS broker. Game data is WebRTC between browsers.
+
+- Same wifi: usually works with STUN only (Google + Cloudflare + freeTURN).
+- **4G/5G, CGNAT, campus wifi:** a **TURN relay** is often required. The client ships public fallbacks (PeerJS `0.peerjs.com` / `eu-0.turn.peerjs.com` and [freeTURN](https://freeturn.net/) `free:free`). These are shared, rate-limited, and can go down; they are not a paid service and there are no secrets in the repo.
+- If a guest still cannot join, the game shows a clear error: try the **same wifi** as the host, swap wifi/data, or a phone hotspot. Symmetric NAT on both sides can still fail.
+- Optional: in `js/net.js` you can fill `METERED_APP` / `METERED_KEY` with a free [Metered](https://metered.ca/) TURN app (20 GB/month). Do not commit keys.
+
+Query flags for tests / self-hosting: `?peerHost=127.0.0.1&peerPort=9000` (local PeerJS), `?gfx=flat` (SVG board, no WebGL).
+
 ## License and credits
 
-Original code and assets are under the [MIT license](LICENSE) © 2026 Sowtank. If you use this project or part of it, a visible credit is kindly appreciated (details in [NOTICE.md](NOTICE.md)). The game itself shows that credit, with a link to this repository, under the main menu and in the help screen.
+Original code and assets are under the [MIT license](LICENSE) © 2026 Sowtank ([KurusuDes/CatanTestFriendos](https://github.com/KurusuDes/CatanTestFriendos)). If you use this project or part of it, a visible credit is kindly appreciated (details in [NOTICE.md](NOTICE.md)). The game itself shows that credit, with a link to the original repository, under the main menu and in the help screen.
 
 **Unofficial fan project.** It isn't affiliated with, sponsored or endorsed by Catan GmbH, CATAN Studio or Kosmos. *CATAN* is a trademark of its respective owners. Third-party notices (three.js, PeerJS, fonts) are in [NOTICE.md](NOTICE.md).
