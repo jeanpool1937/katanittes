@@ -147,8 +147,11 @@ test('6 móviles: sala online, enlace, colocación y sincronía', async ({ brows
     await expect(host.page.getByTestId('lobby-count')).toContainText('6');
     for (const g of guests) await expect(g.page.getByTestId('seat')).toHaveCount(6, { timeout: 20_000 });
 
-    await host.page.screenshot({ path: join(ART, 'lobby-6.png'), fullPage: true, timeout: 8_000 });
-    await guests[0].page.screenshot({ path: join(ART, 'lobby-guest-phone.png'), fullPage: true, timeout: 8_000 });
+    await host.page.evaluate(() => document.querySelectorAll('.toast').forEach(el => el.remove()));
+    const roomCode = host.page.getByTestId('room-code');
+    await roomCode.scrollIntoViewIfNeeded();
+    await host.page.screenshot({ path: join(ART, 'lobby-6.png'), timeout: 8_000 });
+    await guests[0].page.screenshot({ path: join(ART, 'lobby-guest-phone.png'), timeout: 8_000 });
     await testInfo.attach('lobby-6', { path: join(ART, 'lobby-6.png'), contentType: 'image/png' });
     await testInfo.attach('lobby-guest', { path: join(ART, 'lobby-guest-phone.png'), contentType: 'image/png' });
 
@@ -202,6 +205,7 @@ test('6 móviles: sala online, enlace, colocación y sincronía', async ({ brows
     const after = await screenAttr(host.page, 'data-phase');
     for (const s of seats) await expect(s.page.locator('.game.screen')).toHaveAttribute('data-phase', after);
 
+    await Promise.all(seats.map(s => s.page.evaluate(() => document.querySelectorAll('.toast').forEach(el => el.remove()))));
     const players = host.page.getByTestId('players');
     await players.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
     const pbox = await players.boundingBox();
