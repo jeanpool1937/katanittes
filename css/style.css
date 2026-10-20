@@ -16,7 +16,8 @@
   --display: 'Fredoka', 'Nunito', system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
+html, body { margin: 0; height: 100%; max-width: 100%; overflow-x: hidden; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   background: radial-gradient(1200px 800px at 20% 0%, #1d3561 0%, var(--bg) 60%) fixed, var(--bg);
   color: var(--text);
@@ -33,6 +34,7 @@ h1, h2, h3 { font-family: var(--display); margin: 0; }
   padding: 10px 16px; border-radius: 12px; border: 1px solid var(--line);
   background: var(--panel2); color: var(--text); font-weight: 700; font-size: 14px;
   cursor: pointer; transition: transform .12s, background .15s, box-shadow .15s; white-space: nowrap;
+  min-height: 44px; touch-action: manipulation;
 }
 .btn:hover:not(:disabled) { background: #3a5285; transform: translateY(-1px); }
 .btn:active:not(:disabled) { transform: translateY(1px); }
@@ -49,7 +51,7 @@ h1, h2, h3 { font-family: var(--display); margin: 0; }
 .screen { min-height: 100vh; }
 
 /* ---------- menu ---------- */
-.menu { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px 16px; position: relative; overflow: hidden; }
+.menu { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; min-height: 100dvh; padding: 24px 16px; position: relative; overflow-x: hidden; overflow-y: auto; }
 .menu-bg { position: absolute; inset: 0; opacity: .35; pointer-events: none; }
 .menu-bg .fhex { position: absolute; font-size: 42px; animation: floaty 9s ease-in-out infinite; }
 @keyframes floaty { 0%,100% { transform: translateY(0) rotate(0) } 50% { transform: translateY(-26px) rotate(12deg) } }
@@ -80,7 +82,7 @@ h1, h2, h3 { font-family: var(--display); margin: 0; }
 .preview-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; color: var(--muted); font-size: 13px; align-items: center; }
 .pill { background: rgba(255,255,255,.08); padding: 4px 10px; border-radius: 99px; font-weight: 700; font-size: 12px; }
 
-.player-row { display: grid; grid-template-columns: 36px minmax(0,1fr) 150px 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
+.player-row { display: grid; grid-template-columns: 36px 40px minmax(0,1fr) minmax(110px, 150px) 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
 .swatch { width: 36px; height: 36px; border-radius: 10px; border: 3px solid rgba(255,255,255,.7); cursor: pointer; }
 input[type=text], select, textarea {
   background: rgba(0,0,0,.28); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; font: inherit; width: 100%;
@@ -185,20 +187,32 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 @media (max-width: 860px) {
   .game { height: auto; min-height: 100dvh; grid-template-rows: auto auto auto; }
   .game-main { grid-template-columns: 1fr; }
-  .board-wrap { height: 62vh; }
+  .board-wrap { height: min(58vh, 56dvh); min-height: 220px; }
   .side { border-left: 0; }
-  .log { max-height: 180px; }
-  .players { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-  .actionbar { position: sticky; bottom: 0; background: #0a1222; padding: 8px 10px; gap: 8px; }
+  .log { max-height: 140px; }
+  .players { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .players.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 8px; }
+  .actionbar { position: sticky; bottom: 0; background: #0a1222; padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
   .actions { margin-left: 0; gap: 6px; }
-  .actions .btn { padding: 8px 10px; font-size: 13px; }
+  .actions .btn { padding: 8px 10px; font-size: 13px; min-height: 44px; }
   .brand { font-size: 15px; }
-  .topbar { gap: 6px 10px; padding: 6px 10px; }
+  .topbar { gap: 6px 10px; padding: calc(6px + env(safe-area-inset-top, 0px)) 10px 6px; }
   .turn-info { min-width: 0; font-size: 14px; }
   .phase-tag { display: none; }
   .top-actions { margin-left: auto; }
   .rcard, .dcard { width: 40px; height: 54px; font-size: 19px; }
   .banner { font-size: 13px; top: 8px; padding: 7px 14px; }
+  .menu { overflow-x: hidden; overflow-y: auto; padding: calc(24px + env(safe-area-inset-top, 0px)) 12px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .start-bar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 860px) and (orientation: landscape) {
+  .game { height: 100dvh; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .game-main { grid-template-columns: minmax(0, 1fr) minmax(160px, 32vw); }
+  .board-wrap { height: auto; min-height: 0; }
+  .players { grid-template-columns: 1fr; overflow-y: auto; }
+  .players.compact { grid-template-columns: 1fr; }
+  .log { max-height: 80px; }
+  .side { min-height: 0; overflow: auto; }
 }
 
 /* ---------- board svg ---------- */
@@ -240,10 +254,10 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 @keyframes hotFade { 50% { opacity: .55 } }
 .hit, .hit-e { fill: transparent; stroke: transparent; cursor: pointer; }
 .hit-e { stroke-width: 26; stroke-linecap: round; }
-.hit:hover + *, .hit:hover { fill: rgba(255,255,255,.25); }
-.hit-e:hover { stroke: rgba(255,255,255,.3); }
+.hit:hover + *, .hit:hover, .hit:active + *, .hit:active { fill: rgba(255,255,255,.25); }
+.hit-e:hover, .hit-e:active { stroke: rgba(255,255,255,.3); }
 .hot-tile { fill: rgba(255,255,255,.12); stroke: #fff; stroke-width: 4; stroke-dasharray: 10 8; cursor: pointer; animation: hotFade 1.3s infinite; }
-.hot-tile:hover { fill: rgba(255,90,90,.35); animation: none; }
+.hot-tile:hover, .hot-tile:active { fill: rgba(255,90,90,.35); animation: none; }
 
 /* ---------- modals ---------- */
 .overlay { position: fixed; inset: 0; background: rgba(4,8,18,.66); display: grid; place-items: center; z-index: 50; padding: 16px; backdrop-filter: blur(3px); animation: fadeIn .2s; }

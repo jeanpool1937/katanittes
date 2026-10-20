@@ -277,7 +277,7 @@ export class BoardView {
       for (const v of legal) {
         const V = bd.vertices[v];
         g.append(S('circle', { cx: V.x * U, cy: V.y * U, r: 14, class: 'hot-v', style: `--pc:${inter.color || '#fff'}` }));
-        g.append(S('circle', { cx: V.x * U, cy: V.y * U, r: 24, class: 'hit', onclick: e => pick(v, e) }));
+        g.append(S('circle', { cx: V.x * U, cy: V.y * U, r: 28, class: 'hit', 'data-testid': 'spot', 'data-spot': 'v' + v, onclick: e => pick(v, e) }));
       }
       svg.append(g);
     }
@@ -290,7 +290,7 @@ export class BoardView {
         const x2 = (c.x + (a.x - c.x) * 0.24) * U, y2 = (c.y + (a.y - c.y) * 0.24) * U;
         g.append(S('line', { x1, y1, x2, y2, class: 'hot-e-bg' }));
         g.append(S('line', { x1, y1, x2, y2, class: 'hot-e', style: `--pc:${inter.color || '#fff'}` }));
-        g.append(S('line', { x1, y1, x2, y2, class: 'hit-e', onclick: ev => pick(e, ev) }));
+        g.append(S('line', { x1, y1, x2, y2, class: 'hit-e', 'data-testid': 'spot', 'data-spot': 'e' + e, onclick: ev => pick(e, ev) }));
       }
       svg.append(g);
     }

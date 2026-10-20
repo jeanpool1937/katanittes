@@ -358,6 +358,40 @@ t('ADHD: la victoria cuenta para cualquiera, en cualquier momento, y no corta el
   eq(s.fx, [{ kind: 'cheer', pid: 0, n: 2 }]);
 });
 
+t('6 jugadores humanos en mapa extendido: colocación inicial y primer turno', () => {
+  const c = defaultConfig();
+  c.seed = 7;
+  c.rules.randomStart = false;
+  c.map.shape = 'extended';
+  const colors = ['#e53935', '#1e88e5', '#ff9800', '#f5f5f5', '#43a047', '#8e24aa'];
+  c.players = colors.map((color, i) => ({ name: 'P' + (i + 1), kind: 'human', color }));
+  const s = G.createGame(c);
+  eq(s.players.length, 6, 'asientos');
+  eq(s.board.tiles.length, 30, 'hexágonos del extendido');
+  eq(s.phase, 'setup');
+  let guard = 0;
+  while (s.phase === 'setup' && guard++ < 80) {
+    const pid = G.pendingActors(s)[0];
+    if (s.setup.step === 'settlement') {
+      const vids = G.legalSetupSettlements(s, pid);
+      ok(vids.length, 'sitios de poblado para ' + pid);
+      ok(act(s, { type: 'placeSettlement', pid, vid: vids[0] }).ok, 'poblado');
+    } else {
+      const eids = G.legalSetupRoads(s, pid);
+      ok(eids.length, 'sitios de camino para ' + pid);
+      ok(act(s, { type: 'placeRoad', pid, eid: eids[0] }).ok, 'camino');
+    }
+  }
+  ok(s.phase !== 'setup', 'terminó la colocación');
+  eq(Object.keys(s.buildings).length, 12, '12 poblados');
+  eq(Object.keys(s.roads).length, 12, '12 caminos');
+  eq(s.phase, 'roll');
+  eq(s.current, 0, 'empieza el asiento 0');
+  ok(act(s, { type: 'roll', pid: 0 }).ok, 'primera tirada');
+  if (s.phase === 'main') ok(act(s, { type: 'endTurn', pid: 0 }).ok, 'cierra el turno');
+  ok(['main', 'discard', 'robber', 'roll'].includes(s.phase), 'la partida avanza: ' + s.phase);
+});
+
 t('historial de tiradas: quién y cuánto, como mucho 30', () => {
   const s = fresh();
   for (let i = 0; i < 35; i++) {

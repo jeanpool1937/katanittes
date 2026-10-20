@@ -30,7 +30,7 @@ export function gameScreen(root) {
     rolls: h('div', { class: 'roll-log hidden' }),
     event: h('div'),
     banner: h('div', { class: 'banner jit hidden' }),
-    players: h('div', { class: 'players' }),
+    players: h('div', { class: 'players', 'data-testid': 'players' }),
     bank: h('div', { class: 'bank-info' }),
     log: h('div', { class: 'log' }),
     actionbar: h('footer', { class: 'actionbar' }),
@@ -51,7 +51,7 @@ export function gameScreen(root) {
       h('button', { class: 'btn', title: t('Acercar'), onclick: () => ui.board && ui.board.setZoom(ui.board.zoom * 1.25) }, '+'),
       h('button', { class: 'btn', title: t('Alejar'), onclick: () => ui.board && ui.board.setZoom(ui.board.zoom / 1.25) }, '−'),
       h('button', { class: 'btn', title: t('Centrar'), onclick: () => ui.board && ui.board.resetView() }, '⤢')));
-  root.append(h('div', { class: 'game screen' },
+  root.append(h('div', { class: 'game screen', 'data-testid': 'game-screen' },
     topbar,
     h('main', { class: 'game-main' }, boardWrap, h('aside', { class: 'side' }, els.players, els.bank, els.log)),
     els.actionbar), els.overlay, els.pass);
@@ -100,11 +100,22 @@ export function gameScreen(root) {
   };
 }
 
-// ---------------- board (3D only; the flat 2D map is just a fallback without WebGL) ----------------
+function wantFlatBoard() {
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.get('gfx') === 'flat' || q.get('gfx') === '2d') return true;
+    if (q.get('gfx') === '3d') return false;
+  } catch {}
+  return false;
+}
+
+// ---------------- board (3D; the flat 2D map is a fallback, or ?gfx=flat for tests) ----------------
 async function mountBoard(u) {
   const loading = h('div', { class: 'board-loading jit' }, t('🏝️ Levantando la isla...'));
   u.boardWrap.append(loading);
+  const skip3d = wantFlatBoard();
   try {
+    if (skip3d) throw new Error('flat');
     const { Board3D } = await import('./board3d.js');
     if (ui !== u) return;
     const b = await Board3D.create(u.boardWrap);
@@ -120,9 +131,9 @@ async function mountBoard(u) {
       App.ping(v, x, z);
     };
   } catch (e) {
-    console.error(e);
+    if (!skip3d) console.error(e);
     if (ui !== u) return;
-    toast(t('No se pudo cargar el mapa 3D (¿sin conexión o WebGL?): uso el plano'), 'error', 4000);
+    if (!skip3d) toast(t('No se pudo cargar el mapa 3D (¿sin conexión o WebGL?): uso el plano'), 'error', 4000);
     u.board = new BoardView(u.boardWrap);
   }
   loading.remove();
@@ -492,6 +503,15 @@ function showPing(seat, x, z) {
 // ---------------- render ----------------
 export function render(st) {
   if (!ui || !st) return;
+  const screen = document.querySelector('.game.screen');
+  if (screen) {
+    screen.dataset.phase = st.phase || '';
+    screen.dataset.current = String(st.current ?? '');
+    screen.dataset.seat = String(App.mySeat ?? App.viewer ?? '');
+    screen.dataset.players = String(st.players.length);
+    screen.dataset.setup = st.setup ? st.setup.step : '';
+    if (st.setup) screen.dataset.setupIdx = String(st.setup.idx);
+  }
   const v = computeViewer(st);
   App.viewer = v;
   const locked = privacyOn(st) && v >= 0 && ui.unlockedFor !== v;
@@ -668,7 +688,7 @@ function renderBoard(st, v, locked) {
 
 function renderPlayers(st, v) {
   const box = clear(ui.els.players);
-  box.classList.toggle('compact', st.players.length > 5);
+  box.classList.toggle('compact', st.players.length > 4);
   const acting = new Set(G.pendingActors(st));
   const online = App.isOnline();
   const now = Date.now();
@@ -679,7 +699,7 @@ function renderPlayers(st, v) {
     const me = p.id === v;
     const conn = online && p.kind === 'human' ? App.net.presence(p.id) : undefined;
     const tag = p.retired ? t('retirado') : p.kind === 'bot' ? (p.remote ? t('bot sustituto') : { easy: t('bot fácil'), normal: t('bot normal'), hard: t('bot difícil') }[p.level] || t('bot')): me ? t('tú') : '';
-    const card = h('div', { class: 'pcard' + (st.current === p.id ? ' current' : '') + (st.winner === p.id ? ' winner' : '') + (p.retired ? ' retired' : ''), style: { '--pc': p.color } },
+    const card = h('div', { class: 'pcard' + (st.current === p.id ? ' current' : '') + (st.winner === p.id ? ' winner' : '') + (p.retired ? ' retired' : ''), style: { '--pc': p.color }, 'data-testid': 'pcard', 'data-seat': String(p.id) },
       h('div', { class: 'top' },
         h('div', { class: 'avatar' }, p.flag ? flagImg(p.flag, 30) : p.kind === 'bot' ? '🤖' : p.name.slice(0, 1).toUpperCase()),
         h('div', { class: 'name' }, p.name, tag && h('small', null, tag), conn === false ? h('span', { class: 'conn off', title: t('Desconectado') }, ' 🔌') : null),

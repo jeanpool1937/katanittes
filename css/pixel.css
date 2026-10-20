@@ -174,7 +174,7 @@ input[type=range] { accent-color: var(--sand); }
 .hot3d.e { width: 22px; height: 10px; }
 .hot3d.t { width: 30px; height: 30px; display: grid; place-items: center; }
 .hot3d.t::after { content: '✖'; color: var(--ink); font-size: 15px; }
-.hot3d:hover { animation: none; opacity: 1; background: #fff4cf; box-shadow: 0 0 0 3px var(--ink), 0 0 0 7px #ffe7a3; }
+.hot3d:hover, .hot3d:active, .hot3d:focus-visible { animation: none; opacity: 1; background: #fff4cf; box-shadow: 0 0 0 3px var(--ink), 0 0 0 7px #ffe7a3; }
 @keyframes hotBreath { 50% { opacity: 1; box-shadow: 0 0 0 3px var(--ink), 0 0 0 9px rgba(255,231,163,.2); } }
 .board-wrap { background: var(--ink); }
 .board-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--sand); font-family: var(--display); font-size: 20px; text-shadow: 3px 3px 0 var(--wine); pointer-events: none; }
@@ -255,7 +255,7 @@ img.flag-img:not(.pixel) { image-rendering: auto; }
 .players.compact .pcard .avatar img.flag-img { width: 30px; height: 20px; }
 
 /* ================= online hub ================= */
-.online-hub { position: relative; min-height: 100vh; min-height: 100dvh; overflow: hidden; }
+.online-hub { position: relative; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; }
 .online-hub .menu-bg3d::after { background: radial-gradient(ellipse at center, rgba(26,28,44,.55) 0%, rgba(26,28,44,.88) 75%); }
 .hub-inner { position: relative; max-width: 1180px; margin: 0 auto; padding: 18px 16px 30px; }
 .hub-head { display: flex; gap: 16px; align-items: center; margin-bottom: 8px; }
@@ -487,3 +487,50 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
 .roll-chip.newest { opacity: 1; width: 32px; height: 28px; font-size: 16px; background: #333c57; box-shadow: inset 5px 0 0 var(--pc), 0 0 0 2px var(--ink), 0 0 0 4px var(--sand); margin-bottom: 2px; }
 .roll-chip.seven { color: #ef7d57; }
 @media (max-width: 720px) { .roll-log { top: 6px; right: 6px; gap: 4px; max-height: calc(100% - 230px); } .roll-chip { width: 24px; height: 20px; font-size: 12px; } }
+
+/* ================= mobile-first: phones 360–430px and landscape ================= */
+.btn.sm { min-height: 40px; }
+.cap { width: 44px; height: 44px; min-width: 44px; }
+.chip { min-height: 40px; }
+.swatch { min-width: 36px; min-height: 36px; }
+.hub-status.error {
+  margin: 12px auto 0; max-width: 640px; padding: 12px 14px; background: #3a1422;
+  box-shadow: 0 0 0 3px var(--wine), 0 0 0 6px var(--ink); color: #ffd0d8; white-space: normal; line-height: 1.35; text-align: left;
+}
+.hub-map-hint { color: var(--steel); font-size: 13px; margin: 0; }
+@media (max-width: 480px) {
+  .hot3d.v { width: 28px; height: 28px; }
+  .hot3d.e { width: 32px; height: 16px; }
+  .hot3d.t { width: 40px; height: 40px; }
+  .zoom-ctrl .btn { width: 44px; height: 44px; min-height: 44px; }
+  .room-code { font-size: 28px; letter-spacing: 4px; }
+  .room-card .room-code { font-size: 32px; letter-spacing: 5px; }
+  .hub-inner { padding: calc(12px + env(safe-area-inset-top, 0px)) 10px calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .hub-tips { flex-direction: column; align-items: stretch; }
+  .hub-tips span { white-space: normal; }
+  .menu-buttons { width: min(100%, 400px); }
+  .menu-buttons .btn { min-height: 48px; white-space: normal; }
+  .logo .t1 { font-size: clamp(36px, 14vw, 72px); letter-spacing: 2px; }
+  .card { margin-left: 8px; margin-right: 8px; }
+  .pins { gap: 6px; }
+  .seat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .players.compact .pcard { padding: 6px 7px; margin: 2px; }
+  .players.compact .pcard .stats { gap: 4px; font-size: 11px; }
+  .players.compact .pcard .vp { font-size: 18px; }
+  .pcard .name { font-size: 13px; }
+  .emote-grid { grid-template-columns: repeat(4, 1fr); }
+  .emote-btn { min-height: 44px; font-size: 26px; }
+  .offer { width: min(460px, calc(100% - 12px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .toasts { width: min(420px, calc(100vw - 16px)); left: 50%; }
+  .toast { white-space: normal; }
+  .adhd { left: 8px; width: calc(100% - 56px); max-height: 42%; }
+}
+@media (max-width: 380px) {
+  .pin { width: 40px !important; height: 50px; font-size: 22px !important; }
+  .players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (pointer: coarse) {
+  .btn:hover:not(:disabled) { transform: none; }
+  .map-card:hover { transform: none; }
+  .emote-btn:hover { transform: none; }
+}

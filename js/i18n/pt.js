@@ -663,4 +663,12 @@ export default {
   "Idioma": "Idioma",
   "Amigo {n}": "Amigo {n}",
   "Jugador {n}": "Jogador {n}",
+  "La sala existe pero no se pudo conectar. En datos móviles (4G/5G) o redes con NAT estricto hace falta un relé TURN. Prueba: 1) la misma wifi que el anfitrión, 2) datos ↔ wifi al revés, 3) un teléfono como hotspot. Si nada funciona, la red está bloqueando WebRTC.": "A sala existe, mas não deu para conectar. Em dados móveis (4G/5G) ou NAT estrito precisa de um relé TURN. Tente: 1) o mesmo wi-fi do anfitrião, 2) trocar dados ↔ wi-fi, 3) um hotspot. Se nada funcionar, a rede está bloqueando WebRTC.",
+  "No se pudo abrir la sala. ¿Sin conexión, o el servidor de emparejamiento no responde?": "Não foi possível abrir a sala. Sem conexão, ou o servidor de emparelhamento não responde?",
+  "No se pudo hablar con el servidor de emparejamiento ({type}). Revisa la conexión e inténtalo de nuevo.": "Não foi possível falar com o servidor de emparelhamento ({type}). Verifique a conexão e tente de novo.",
+  "Hasta 6 (o 8) en el móvil · código o enlace · sin cuentas": "Até 6 (ou 8) no celular · código ou link · sem contas",
+  "🗺️ Con 5-6 jugadores uso el mapa extendido (30 hexágonos).": "🗺️ Com 5–6 jogadores uso o mapa estendido (30 hexágonos).",
+  "🚪 Unirse a la sala {code}": "🚪 Entrar na sala {code}",
+  "Pon tu nombre y entra. El anfitrión te está esperando.": "Coloque seu nome e entre. O anfitrião está esperando.",
+  "📡 WebRTC entre teléfonos (con relé TURN si hace falta)": "📡 WebRTC entre celulares (com relé TURN se precisar)",
 };

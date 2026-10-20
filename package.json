@@ -5,6 +5,8 @@
   "license": "MIT",
   "scripts": {
     "test": "node tests/rules.mjs && node tests/sim.mjs 300",
-    "sim": "node tests/sim.mjs"
+    "test:e2e": "playwright test --config tests/e2e/playwright.config.mjs",
+    "sim": "node tests/sim.mjs",
+    "i18n": "node tools/i18n.mjs check"
   }
 }
