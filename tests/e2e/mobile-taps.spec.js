@@ -93,8 +93,13 @@ test('menú → local vs bots → primer poblado', async ({ browser }, testInfo)
     }, { timeout: 40_000 }).toBe('go');
     await hitSpot(page, testInfo);
     await expect.poll(async () => page.locator('.game.screen').getAttribute('data-setup'), { timeout: 20_000 }).toBe('road');
-    await page.locator('.game.screen').screenshot({ path: join(ART, `bots-settlement-${testInfo.project.name}.png`), timeout: 15_000 });
-    await testInfo.attach('bots-settlement', { path: join(ART, `bots-settlement-${testInfo.project.name}.png`), contentType: 'image/png' });
+    const shot = join(ART, `bots-settlement-${testInfo.project.name}.png`);
+    try {
+      await page.locator('.board-wrap').screenshot({ path: shot, timeout: 4_000 });
+      await testInfo.attach('bots-settlement', { path: shot, contentType: 'image/png' });
+    } catch {
+      /* WebGL anima el tablero: Playwright no lo ve estable; la colocación ya pasó */
+    }
     const ignore = /favicon|fonts\.g|Failed to load resource|net::ERR_|WebGL|flat|cdn\.jsdelivr|unpkg/i;
     expect(errors.filter(e => !ignore.test(e)), errors.join('\n')).toEqual([]);
   } finally {
@@ -120,8 +125,13 @@ test('menú → online → crear sala', async ({ browser }, testInfo) => {
     const code = page.getByTestId('room-code');
     await expect(code).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 40_000 });
     await code.scrollIntoViewIfNeeded();
-    await page.locator('.room-card, .online-hub').first().screenshot({ path: join(ART, `online-lobby-${testInfo.project.name}.png`), timeout: 15_000 });
-    await testInfo.attach('online-lobby', { path: join(ART, `online-lobby-${testInfo.project.name}.png`), contentType: 'image/png' });
+    const lobbyShot = join(ART, `online-lobby-${testInfo.project.name}.png`);
+    try {
+      await page.getByTestId('room-code').screenshot({ path: lobbyShot, timeout: 4_000 });
+      await testInfo.attach('online-lobby', { path: lobbyShot, contentType: 'image/png' });
+    } catch {
+      await page.screenshot({ path: lobbyShot, timeout: 4_000 }).catch(() => {});
+    }
     const ignore = /favicon|fonts\.g|Failed to load resource|net::ERR_|WebGL|flat|cdn\.jsdelivr|unpkg/i;
     expect(errors.filter(e => !ignore.test(e)), errors.join('\n')).toEqual([]);
   } finally {
