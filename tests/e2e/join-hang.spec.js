@@ -1,5 +1,6 @@
 // iPhone / WebKit: ?room= must not freeze the lobby when the peer broker is unreachable.
 import { test, expect, devices } from '@playwright/test';
+import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +9,34 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const ART = join(ROOT, 'artifacts');
 const ROOM = 'U5M26';
 const DEAD_PEER = `peerHost=127.0.0.1&peerPort=1&peerSecure=0&peerWait=2500&ice=local`;
+const PEER_PORT = 9000;
+const PEER_PATH = '/myapp';
+
+function startPeerServer() {
+  const bin = join(ROOT, 'node_modules/peer/dist/bin/peerjs.js');
+  const child = spawn(process.execPath, [bin, '--port', String(PEER_PORT), '--path', PEER_PATH, '--allow_discovery'], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let out = '';
+  child.stdout.on('data', d => { out += d; });
+  child.stderr.on('data', d => { out += d; });
+  return new Promise((res, rej) => {
+    const t = setTimeout(() => {
+      if (/EADDRINUSE|Started PeerServer|listening/i.test(out)) return res({ close: () => child.kill('SIGTERM') });
+      child.kill('SIGTERM');
+      rej(new Error('PeerServer no arrancó:\n' + out));
+    }, 4000);
+    const onData = () => {
+      if (/Started PeerServer|EADDRINUSE/i.test(out)) {
+        clearTimeout(t);
+        res({ close: () => child.kill('SIGTERM') });
+      }
+    };
+    child.stdout.on('data', onData);
+    child.stderr.on('data', onData);
+    child.on('error', e => { clearTimeout(t); rej(e); });
+  });
+}
 
 async function press(locator, testInfo) {
   await locator.scrollIntoViewIfNeeded();
@@ -82,10 +111,36 @@ test('?room= con peer inalcanzable: timeout, reintentar, cancelar, ← menú', a
     await press(page.getByTestId('hub-back'), testInfo);
     await expect(page.getByTestId('play-local')).toBeVisible({ timeout: 15_000 });
 
+    expect(errors.filter(e => /already been destroyed/i.test(e)), errors.filter(e => /already been destroyed/i.test(e)).join('\n')).toEqual([]);
     const ignore = /favicon|fonts\.g|Failed to load resource|net::ERR_|WebGL|flat|cdn\.jsdelivr|unpkg|peerjs|WebSocket/i;
     expect(errors.filter(e => !ignore.test(e)), errors.join('\n')).toEqual([]);
   } finally {
     await ctx.close();
+  }
+});
+
+test('?room= de una sala que no existe: mensaje, no el de TURN', async ({ browser }, testInfo) => {
+  mkdirSync(ART, { recursive: true });
+  const peer = await startPeerServer();
+  const { ctx, page, errors } = await openPhone(browser, testInfo);
+  try {
+    const qs = `peerHost=127.0.0.1&peerPort=${PEER_PORT}&peerSecure=0&peerPath=${encodeURIComponent(PEER_PATH)}&peerWait=8000&ice=local`;
+    await page.goto(`/?room=${ROOM}&${qs}`);
+    const status = page.getByTestId('hub-status');
+    await expect(status).toHaveClass(/error/, { timeout: 20_000 });
+    await expect(status).toContainText(new RegExp(`No existe la sala ${ROOM}`));
+    await expect(status).toContainText(/anfitrión ya no está/);
+    await expect(status).not.toContainText(/La sala existe pero no se pudo conectar/);
+    await expect(page.getByTestId('retry-join')).toBeVisible();
+    await expect(page.getByTestId('create-room')).toBeEnabled();
+    const shot = join(ART, `missing-room-${testInfo.project.name}.png`);
+    await status.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: shot, fullPage: true, timeout: 6_000 }).catch(() => {});
+    await testInfo.attach('missing-room', { path: shot, contentType: 'image/png' }).catch(() => {});
+    expect(errors.filter(e => /already been destroyed/i.test(e))).toEqual([]);
+  } finally {
+    await ctx.close();
+    try { peer.close(); } catch {}
   }
 });
 
@@ -103,6 +158,7 @@ test('Cancelar corta una búsqueda que no responde', async ({ browser }, testInf
     await expect(page.getByTestId('retry-join')).toBeVisible();
     await press(page.getByTestId('hub-back'), testInfo);
     await expect(page.getByTestId('play-local')).toBeVisible({ timeout: 15_000 });
+    expect(errors.filter(e => /already been destroyed/i.test(e))).toEqual([]);
     const ignore = /favicon|fonts\.g|Failed to load resource|net::ERR_|WebGL|flat|cdn\.jsdelivr|unpkg|peerjs|WebSocket/i;
     expect(errors.filter(e => !ignore.test(e)), errors.join('\n')).toEqual([]);
   } finally {

@@ -678,4 +678,5 @@ export default {
   "No se pudo cargar PeerJS. Revisa la conexión e inténtalo de nuevo.": "PeerJS konnte nicht geladen werden. Verbindung prüfen und erneut versuchen.",
   "No se pudo hablar con el servidor de emparejamiento. Revisa la conexión e inténtalo de nuevo.": "Der Vermittlungsserver ist nicht erreichbar. Verbindung prüfen und erneut versuchen.",
   "🚪 {name} no pudo entrar: la sala ya tiene el máximo de {n}.": "🚪 {name} konnte nicht beitreten: Der Raum hat schon das Maximum von {n}.",
+  "No existe la sala {code} o el anfitrión ya no está": "Raum {code} gibt es nicht, oder der Gastgeber ist weg",
 };

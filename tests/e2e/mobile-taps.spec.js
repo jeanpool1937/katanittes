@@ -62,13 +62,28 @@ async function openFresh(browser, testInfo) {
 }
 
 async function hitSpot(page, testInfo) {
+  if (await page.locator('.board-3d').count()) {
+    await expect(page.locator('[data-spots-ready="1"]')).toBeAttached({ timeout: 20_000 });
+  }
   const spot = page.locator('[data-testid="spot"][data-spot^="v"], .hot3d.v').first();
   await expect(spot).toBeAttached({ timeout: 45_000 });
-  const box = await spot.boundingBox();
-  expect(box, 'el punto de poblado no tiene caja').toBeTruthy();
-  const x = box.x + box.width / 2, y = box.y + box.height / 2;
-  if (desktop(testInfo)) await page.mouse.click(x, y);
-  else await page.touchscreen.tap(x, y);
+  await expect.poll(async () => {
+    const box = await spot.boundingBox();
+    return box && box.width >= 8 && box.height >= 8 && box.y > 20 ? 'ok' : 'wait';
+  }, { timeout: 12_000 }).toBe('ok');
+  const tap = async () => {
+    const box = await spot.boundingBox();
+    expect(box, 'el punto de poblado no tiene caja').toBeTruthy();
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    if (desktop(testInfo)) await page.mouse.click(x, y);
+    else await page.touchscreen.tap(x, y);
+  };
+  await tap();
+  const step = await page.locator('.game.screen').getAttribute('data-setup');
+  if (step === 'settlement') {
+    await page.waitForTimeout(250);
+    await tap();
+  }
 }
 
 test.describe.configure({ mode: 'serial' });

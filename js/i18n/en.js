@@ -678,4 +678,5 @@ export default {
   "No se pudo cargar PeerJS. Revisa la conexión e inténtalo de nuevo.": "Couldn't load PeerJS. Check your connection and try again.",
   "No se pudo hablar con el servidor de emparejamiento. Revisa la conexión e inténtalo de nuevo.": "Couldn't reach the matchmaking server. Check your connection and try again.",
   "🚪 {name} no pudo entrar: la sala ya tiene el máximo de {n}.": "🚪 {name} couldn't join: the room already has the maximum of {n}.",
+  "No existe la sala {code} o el anfitrión ya no está": "There's no room {code}, or the host is gone",
 };

@@ -171,6 +171,7 @@ input[type=range] { accent-color: var(--sand); }
 .port3d { font-family: var(--num); background: var(--white); color: var(--ink); padding: 2px 6px; font-size: 14px; font-weight: 700; box-shadow: 0 0 0 3px var(--ink), 3px 4px 0 1px rgba(0,0,0,.35); display: flex; gap: 3px; align-items: center; }
 .rune3d { font-size: 26px; color: #f3d9a4; text-shadow: 2px 2px 0 var(--ink); }
 /* build hints: soft yellow with a slow breathing glow (no hard blinking). No `transform` here either. */
+.labels-3d:not(.spots-ready) .hot3d { pointer-events: none; }
 .hot3d { pointer-events: auto; border: 0; cursor: pointer; background: #ffe7a3; padding: 0; opacity: .85;
   box-shadow: 0 0 0 3px var(--ink), 0 0 0 4px rgba(255,231,163,.45); animation: hotBreath 2.4s ease-in-out infinite; }
 .hot3d.v { width: 22px; height: 22px; }
