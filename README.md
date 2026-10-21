@@ -160,7 +160,8 @@ On a phone: Open in Safari/Chrome → Share → **Add to Home Screen** (PWA mani
 Signalling uses the public PeerJS broker. Game data is WebRTC between browsers.
 
 - Same wifi: usually works with STUN only (Google + Cloudflare + freeTURN).
-- **4G/5G, CGNAT, campus wifi:** a **TURN relay** is often required. The client ships public fallbacks (PeerJS `0.peerjs.com` / `eu-0.turn.peerjs.com` and [freeTURN](https://freeturn.net/) `free:free`). These are shared, rate-limited, and can go down; they are not a paid service and there are no secrets in the repo.
+- **4G/5G, CGNAT, campus wifi:** a **TURN relay** is often required, preferably **TCP/TLS on 443** (many mobile networks drop UDP 3478). The client ships public fallbacks: PeerJS `0.peerjs.com`, [freeTURN](https://freeturn.net/) `turns:` **5349**, and `turns:turn.evan-brass.net:443?transport=tcp` (guest/password; TLS 1.3 on 443). These are shared, rate-limited, and can go down; they are not a paid service and there are no secrets in the repo.
+- A `?room=` join that cannot reach the broker stops after **12 s** with an error, **Retry**, and **Cancel**. Back to the menu always works. Local vs-bots never talks to PeerJS.
 - If a guest still cannot join, the game shows a clear error: try the **same wifi** as the host, swap wifi/data, or a phone hotspot. Symmetric NAT on both sides can still fail.
 - Optional: in `js/net.js` you can fill `METERED_APP` / `METERED_KEY` with a free [Metered](https://metered.ca/) TURN app (20 GB/month). Do not commit keys.
 

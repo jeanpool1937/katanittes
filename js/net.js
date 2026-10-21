@@ -16,6 +16,8 @@ const PREFIX = 'kchx-v1-';
 export const HOST_SESSION = 'katanittes.hostSession';
 export const GUEST_SESSION = 'katanittes.guestSession';
 export const DEFAULT_CAPACITY = 6;
+export const ONLINE_MAX = 6;
+export const CONNECT_WAIT_MS = 12000;
 const TOKEN_KEY = 'katanittes.token';
 const GRACE_MS = 12000; // time to come back before the table votes
 const PING_MS = 3000, DEAD_MS = 10000; // heartbeat: abrupt signal loss is noticed in ~10s
@@ -70,7 +72,12 @@ const PUBLIC_TURN = [
   { urls: 'turn:freeturn.net:3478', username: 'free', credential: 'free' },
   { urls: 'turn:freeturn.net:3478?transport=tcp', username: 'free', credential: 'free' },
   { urls: 'turns:freeturn.net:5349', username: 'free', credential: 'free' },
+  { urls: 'turns:freeturn.net:5349?transport=tcp', username: 'free', credential: 'free' },
   { urls: 'turns:freeturn.tel:5349', username: 'free', credential: 'free' },
+  { urls: 'turns:freeturn.tel:5349?transport=tcp', username: 'free', credential: 'free' },
+  // TLS/443: 4G/CGNAT and many campus firewalls drop UDP 3478
+  { urls: 'turns:turn.evan-brass.net:443?transport=tcp', username: 'guest', credential: 'password' },
+  { urls: 'turn:turn.evan-brass.net?transport=tcp', username: 'guest', credential: 'password' },
 ];
 let iceList = null;
 
@@ -90,7 +97,7 @@ function brokerFromPage() {
 
 function connectWaitMs() {
   const n = +(pageQuery().get('peerWait') || 0);
-  return n > 0 ? n : 20000;
+  return n > 0 ? n : CONNECT_WAIT_MS;
 }
 
 function peerOptions() {
@@ -131,15 +138,20 @@ function loadPeer() {
   if (peerLib) return peerLib;
   peerLib = new Promise((res, rej) => {
     if (window.Peer) return res(window.Peer);
+    const giveUp = setTimeout(() => {
+      peerLib = null;
+      rej(waitErr(t('No se pudo cargar PeerJS. Revisa la conexión e inténtalo de nuevo.')));
+    }, connectWaitMs());
     const next = i => {
       if (i >= PEER_SRCS.length) {
+        clearTimeout(giveUp);
         peerLib = null;
-        rej(new Error(t('No se pudo cargar PeerJS')));
+        rej(waitErr(t('No se pudo cargar PeerJS. Revisa la conexión e inténtalo de nuevo.')));
         return;
       }
       const sc = document.createElement('script');
       sc.src = PEER_SRCS[i];
-      sc.onload = () => res(window.Peer);
+      sc.onload = () => { clearTimeout(giveUp); res(window.Peer); };
       sc.onerror = () => {
         sc.remove();
         next(i + 1);
@@ -153,6 +165,11 @@ function loadPeer() {
 
 const makeCode = () => Array.from({ length: 5 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+function waitErr(msg) {
+  const e = new Error(msg);
+  e.code = 'PEER_WAIT';
+  return e;
+}
 
 // the board geometry never changes during a game: send it once per connection
 const STATIC_KEYS = ['vertices', 'edges', 'sea', 'ports', 'bounds'];
@@ -190,11 +207,46 @@ export class Net {
     this.open = true;
     this.hostInfo = { name: t('Anfitrión'), flag: null, color: '#e53935' };
     this.lobby = null;
+    this._pendingReject = null;
+  }
+
+  _rejectPending(err) {
+    const rej = this._pendingReject;
+    this._pendingReject = null;
+    if (rej) rej(err);
+  }
+
+  _openPeer(p, timeoutMsg) {
+    return new Promise((res, rej) => {
+      const ms = connectWaitMs();
+      const timer = setTimeout(() => {
+        this._pendingReject = null;
+        try { p.destroy(); } catch {}
+        rej(waitErr(timeoutMsg));
+      }, ms);
+      this._pendingReject = err => {
+        clearTimeout(timer);
+        try { p.destroy(); } catch {}
+        rej(err);
+      };
+      p.on('open', () => {
+        clearTimeout(timer);
+        this._pendingReject = null;
+        res();
+      });
+      p.on('error', e => {
+        if (this.peer && this.peer !== p) return;
+        clearTimeout(timer);
+        this._pendingReject = null;
+        try { p.destroy(); } catch {}
+        rej(e);
+      });
+    });
   }
 
   // ---------- room management (host) ----------
   setRoom({ capacity, open, hostInfo } = {}) {
-    if (capacity) this.capacity = Math.max(2, Math.min(8, capacity));
+    if (capacity) this.capacity = Math.max(2, Math.min(ONLINE_MAX, capacity));
     if (open != null) this.open = open;
     if (hostInfo) this.hostInfo = hostInfo;
     this.pushLobby();
@@ -250,20 +302,10 @@ export class Net {
     for (let attempt = 0; attempt < (reopening ? 25 : 4); attempt++) {
       const c = code || makeCode();
       try {
-        await new Promise((res, rej) => {
-          const p = new Peer(PREFIX + c, opts);
-          p.on('open', () => {
-            this.peer = p;
-            this.code = c;
-            res();
-          });
-          p.on('error', e => {
-            if (!this.peer) {
-              p.destroy();
-              rej(e);
-            } else if (e.type !== 'peer-unavailable') toast(t('Red: {type}', { type: e.type }), 'error');
-          });
-        });
+        const p = new Peer(PREFIX + c, opts);
+        this.peer = p;
+        this.code = c;
+        await this._openPeer(p, t('No se pudo abrir la sala. ¿Sin conexión, o el servidor de emparejamiento no responde?'));
         break;
       } catch (e) {
         // the broker keeps a dropped id for a little while: wait and retry the same code
@@ -271,10 +313,12 @@ export class Net {
           await sleep(3000);
           continue;
         }
+        // timeout / cancel: do not sit through 4 × 12s on a dead broker (iOS/4G hang)
+        if (e && (e.code === 'PEER_WAIT' || /cancelad/i.test(e.message || ''))) throw e;
         if (attempt >= (reopening ? 24 : 3)) throw e;
       }
     }
-    if (!this.peer) throw new Error(t('No se pudo abrir la sala. ¿Sin conexión, o el servidor de emparejamiento no responde?'));
+    if (!this.peer || this.peer.destroyed) throw new Error(t('No se pudo abrir la sala. ¿Sin conexión, o el servidor de emparejamiento no responde?'));
     rememberRoomInUrl(this.code);
     clearInterval(this.hb);
     this.hb = setInterval(() => {
@@ -617,27 +661,27 @@ export class Net {
     const Peer = await loadPeer();
     const opts = await peerOptions();
     if (!this.peer || this.peer.destroyed) {
-      await new Promise((res, rej) => {
-        const p = new Peer(opts);
-        this.peer = p;
-        p.on('open', res);
-        p.on('error', e => {
-          if (e.type === 'peer-unavailable') {
-            if (first && !this.everConnected) rej(new Error(t('No existe una sala con ese código')));
-          } else if (!this.everConnected && first) {
-            const hint = e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error'
-              ? t('No se pudo hablar con el servidor de emparejamiento ({type}). Revisa la conexión e inténtalo de nuevo.', { type: e.type })
-              : t('Error de red: {type}', { type: e.type });
-            rej(new Error(hint));
-          }
-        });
-        p.on('disconnected', () => this.active && !p.destroyed && setTimeout(() => p.reconnect(), 1500));
-      });
+      const p = new Peer(opts);
+      this.peer = p;
+      p.on('disconnected', () => this.active && !p.destroyed && setTimeout(() => p.reconnect(), 1500));
+      try {
+        await this._openPeer(p, t('No se pudo hablar con el servidor de emparejamiento. Revisa la conexión e inténtalo de nuevo.'));
+      } catch (e) {
+        if (e && e.type === 'peer-unavailable' && first && !this.everConnected)
+          throw new Error(t('No existe una sala con ese código'));
+        if (e && (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') && first && !this.everConnected)
+          throw new Error(t('No se pudo hablar con el servidor de emparejamiento ({type}). Revisa la conexión e inténtalo de nuevo.', { type: e.type }));
+        if (e instanceof Error && e.message) throw e;
+        throw new Error(t('Error de red: {type}', { type: (e && e.type) || 'timeout' }));
+      }
     }
+    if (!this.active) throw new Error(t('Búsqueda cancelada.'));
     return new Promise((res, rej) => {
       const c = this.peer.connect(PREFIX + this.code, { reliable: true });
       const timer = setTimeout(() => {
+        this._pendingReject = null;
         if (first && !this.everConnected) {
+          try { c.close(); } catch {}
           rej(new Error(t(CONNECT_HINT)));
           return;
         }
@@ -647,8 +691,14 @@ export class Net {
         this.retry();
         res();
       }, connectWaitMs());
+      this._pendingReject = err => {
+        clearTimeout(timer);
+        try { c.close(); } catch {}
+        rej(err);
+      };
       c.on('open', () => {
         clearTimeout(timer);
+        this._pendingReject = null;
         this.conn = c;
         this.everConnected = true;
         this.reconnecting = false;
@@ -786,6 +836,7 @@ export class Net {
 
   close() {
     this.active = false;
+    this._rejectPending(new Error(t('Búsqueda cancelada.')));
     clearTimeout(this.retryTimer);
     clearInterval(this.voteTimer);
     clearInterval(this.hb);

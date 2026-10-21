@@ -671,4 +671,11 @@ export default {
   "🚪 Unirse a la sala {code}": "🚪 Entra nella stanza {code}",
   "Pon tu nombre y entra. El anfitrión te está esperando.": "Inserisci il nome ed entra. L'host ti sta aspettando.",
   "📡 WebRTC entre teléfonos (con relé TURN si hace falta)": "📡 WebRTC tra telefoni (con relè TURN se serve)",
+  "Hasta 6 en el móvil · código o enlace · sin cuentas": "Fino a 6 sul telefono · codice o link · niente account",
+  "Búsqueda cancelada.": "Ricerca annullata.",
+  "🔁 Reintentar": "🔁 Riprova",
+  "✕ Cancelar": "✕ Annulla",
+  "No se pudo cargar PeerJS. Revisa la conexión e inténtalo de nuevo.": "Impossibile caricare PeerJS. Controlla la connessione e riprova.",
+  "No se pudo hablar con el servidor de emparejamiento. Revisa la conexión e inténtalo de nuevo.": "Impossibile contattare il server di incontro. Controlla la connessione e riprova.",
+  "🚪 {name} no pudo entrar: la sala ya tiene el máximo de {n}.": "🚪 {name} non è potuto entrare: la stanza ha già il massimo di {n}.",
 };

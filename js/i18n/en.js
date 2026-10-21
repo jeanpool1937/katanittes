@@ -671,4 +671,11 @@ export default {
   "🚪 Unirse a la sala {code}": "🚪 Join room {code}",
   "Pon tu nombre y entra. El anfitrión te está esperando.": "Enter your name and join. The host is waiting for you.",
   "📡 WebRTC entre teléfonos (con relé TURN si hace falta)": "📡 WebRTC between phones (with a TURN relay if needed)",
+  "Hasta 6 en el móvil · código o enlace · sin cuentas": "Up to 6 on phones · code or link · no accounts",
+  "Búsqueda cancelada.": "Search cancelled.",
+  "🔁 Reintentar": "🔁 Try again",
+  "✕ Cancelar": "✕ Cancel",
+  "No se pudo cargar PeerJS. Revisa la conexión e inténtalo de nuevo.": "Couldn't load PeerJS. Check your connection and try again.",
+  "No se pudo hablar con el servidor de emparejamiento. Revisa la conexión e inténtalo de nuevo.": "Couldn't reach the matchmaking server. Check your connection and try again.",
+  "🚪 {name} no pudo entrar: la sala ya tiene el máximo de {n}.": "🚪 {name} couldn't join: the room already has the maximum of {n}.",
 };

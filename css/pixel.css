@@ -496,6 +496,10 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
 .cap { width: 44px; height: 44px; min-width: 44px; }
 .chip { min-height: 40px; }
 .swatch { min-width: 36px; min-height: 36px; }
+.hub-join-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 0; position: relative; z-index: 3; }
+.hub-join-actions[hidden] { display: none; }
+.hub-status { position: relative; z-index: 3; min-height: 1.3em; }
+.hub-inner .btn { pointer-events: auto; }
 .hub-status.error {
   margin: 12px auto 0; max-width: 640px; padding: 12px 14px; background: #3a1422;
   box-shadow: 0 0 0 3px var(--wine), 0 0 0 6px var(--ink); color: #ffd0d8; white-space: normal; line-height: 1.35; text-align: left;
