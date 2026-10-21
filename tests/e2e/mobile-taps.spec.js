@@ -63,7 +63,7 @@ async function openFresh(browser, testInfo) {
 
 async function hitSpot(page, testInfo) {
   if (await page.locator('.board-3d').count()) {
-    await expect(page.locator('[data-spots-ready="1"]')).toBeAttached({ timeout: 20_000 });
+    await expect(page.locator('.board-wrap[data-spots-ready="1"]')).toBeAttached({ timeout: 20_000 });
   }
   const spot = page.locator('[data-testid="spot"][data-spot^="v"], .hot3d.v').first();
   await expect(spot).toBeAttached({ timeout: 45_000 });
