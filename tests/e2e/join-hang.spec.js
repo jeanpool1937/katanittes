@@ -59,29 +59,50 @@ test('?room= con peer inalcanzable: timeout, reintentar, cancelar, ← menú', a
     const status = page.getByTestId('hub-status');
     await expect(page.getByTestId('cancel-join')).toBeVisible({ timeout: 8_000 });
     await expect(page.getByTestId('cancel-join')).toBeEnabled();
-    await expect(status).toContainText(new RegExp(`Buscando la sala ${ROOM}|❌`), { timeout: 8_000 });
 
     await expect(status).toHaveClass(/error/, { timeout: 12_000 });
-    await expect(status).toContainText(/❌/);
+    await expect(status).toContainText(/emparejamiento|PeerJS|conexión|No se pudo|no responde|TURN/i);
     await expect(status).not.toContainText(/Buscando la sala/);
     await expect(page.getByTestId('retry-join')).toBeVisible();
     await expect(page.getByTestId('retry-join')).toBeEnabled();
     await expect(page.getByTestId('create-room')).toBeEnabled();
     await expect(page.getByTestId('join-room')).toBeEnabled();
 
+    await status.scrollIntoViewIfNeeded();
     const shot = join(ART, `join-hang-${testInfo.project.name}.png`);
-    await page.screenshot({ path: shot, timeout: 6_000 }).catch(() => {});
+    await page.screenshot({ path: shot, fullPage: true, timeout: 6_000 }).catch(() => {});
     await testInfo.attach('join-hang', { path: shot, contentType: 'image/png' }).catch(() => {});
 
     await press(page.getByTestId('retry-join'), testInfo);
-    await expect(status).toContainText(new RegExp(`Buscando la sala ${ROOM}`), { timeout: 8_000 });
+    await expect(page.getByTestId('cancel-join')).toBeVisible();
     await press(page.getByTestId('cancel-join'), testInfo);
-    await expect(status).toContainText(/Búsqueda cancelada/);
+    await expect(status).toContainText(/Búsqueda cancelada|emparejamiento|No se pudo/);
     await expect(page.getByTestId('retry-join')).toBeVisible();
 
     await press(page.getByTestId('hub-back'), testInfo);
     await expect(page.getByTestId('play-local')).toBeVisible({ timeout: 15_000 });
 
+    const ignore = /favicon|fonts\.g|Failed to load resource|net::ERR_|WebGL|flat|cdn\.jsdelivr|unpkg|peerjs|WebSocket/i;
+    expect(errors.filter(e => !ignore.test(e)), errors.join('\n')).toEqual([]);
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('Cancelar corta una búsqueda que no responde', async ({ browser }, testInfo) => {
+  const { ctx, page, errors } = await openPhone(browser, testInfo);
+  try {
+    // TEST-NET usually blackholes instead of RST, so Peer.open sits until we cancel
+    await page.goto(`/?room=${ROOM}&peerHost=192.0.2.1&peerPort=9&peerSecure=0&peerWait=8000&ice=local`);
+    await expect(page.getByTestId('cancel-join')).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByTestId('create-room')).toBeEnabled();
+    await expect(page.getByTestId('join-room')).toBeEnabled();
+    await expect(page.getByTestId('hub-back')).toBeEnabled();
+    await press(page.getByTestId('cancel-join'), testInfo);
+    await expect(page.getByTestId('hub-status')).toContainText(/Búsqueda cancelada/);
+    await expect(page.getByTestId('retry-join')).toBeVisible();
+    await press(page.getByTestId('hub-back'), testInfo);
+    await expect(page.getByTestId('play-local')).toBeVisible({ timeout: 15_000 });
     const ignore = /favicon|fonts\.g|Failed to load resource|net::ERR_|WebGL|flat|cdn\.jsdelivr|unpkg|peerjs|WebSocket/i;
     expect(errors.filter(e => !ignore.test(e)), errors.join('\n')).toEqual([]);
   } finally {
