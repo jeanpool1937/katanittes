@@ -8,7 +8,7 @@ import { createGame } from '../engine/game.js';
 import { newSeed } from '../engine/rng.js';
 import { openFlagEditor, flagImg, patternFlag, validFlag, myKingdom, saveMyKingdom } from './flag.js';
 import { t } from '../i18n.js';
-import { roomShareUrl } from '../net.js';
+import { roomShareUrl, ONLINE_MAX } from '../net.js';
 
 const CFG_KEY = 'katanittes.lastConfig';
 export const MAPS_KEY = 'katanittes.maps';
@@ -113,7 +113,7 @@ export function lobbyScreen(root, opts = {}) {
   let fillBots = true;
   const connectedGuests = () => (App.net ? App.net.guests.filter(g => g.connected) : []);
   function setCapacity(n) {
-    n = Math.max(2, Math.min(8, n));
+    n = Math.max(2, Math.min(online ? ONLINE_MAX : 8, n));
     while (cfg.players.length < n) {
       const k = cfg.players.length;
       const color = PLAYER_COLORS.find(c => !cfg.players.some(p => p.color === c)) || PLAYER_COLORS[k % PLAYER_COLORS.length];
@@ -151,7 +151,7 @@ export function lobbyScreen(root, opts = {}) {
         h('button', { class: 'btn sm', onclick: () => copy(net.code, t('📋 Código copiado')) }, t('📋 Código')),
         navigator.share ? h('button', { class: 'btn sm', onclick: () => navigator.share({ title: 'Katanittes', text: t('¡Únete a mi sala de Katanittes!'), url: link }).catch(() => {}) }, t('📤 Compartir')) : null),
       h('div', { class: 'section-label' }, t('Tamaño de la sala')),
-      h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (cfg.players.length === n ? ' on' : ''), 'data-cap': n, title: t('{n} jugadores', { n }), onclick: () => setCapacity(n) }, n))),
+      h('div', { class: 'cap-row', 'data-testid': 'cap-row' }, (online ? [2, 3, 4, 5, 6] : [2, 3, 4, 5, 6, 7, 8]).map(n => h('button', { class: 'cap' + (cfg.players.length === n ? ' on' : ''), 'data-cap': n, title: t('{n} jugadores', { n }), onclick: () => setCapacity(n) }, n))),
       h('div', { class: 'gfx-row room-toggles' },
         h('button', { class: 'chip' + (net.open ? ' on' : ''), onclick: () => { net.open = !net.open; renderOnline(); } }, net.open ? t('🟢 Aceptando jugadores') : t('🔒 No entra nadie más')),
         h('button', { class: 'chip' + (fillBots ? ' on' : ''), onclick: () => { fillBots = !fillBots; renderOnline(); } }, t('🤖 Huecos vacíos: bots'))),
@@ -224,18 +224,20 @@ export function lobbyScreen(root, opts = {}) {
 
   function renderLeft() {
     clear(left);
+    const maxSeats = online ? ONLINE_MAX : 8;
     // players
     left.append(h('div', { class: 'card' },
-      h('h3', null, t('👥 Jugadores '), h('small', null, `${cfg.players.length}/8`)),
+      h('h3', null, t('👥 Jugadores '), h('small', { 'data-testid': 'player-max' }, `${cfg.players.length}/${maxSeats}`)),
       playerRows(),
       h('button', {
-        class: 'btn sm', disabled: cfg.players.length >= 8,
+        class: 'btn sm', disabled: cfg.players.length >= maxSeats,
         onclick: () => {
+          if (cfg.players.length >= maxSeats) return;
           const color = PLAYER_COLORS.find(c => !cfg.players.some(p => p.color === c)) || PLAYER_COLORS[cfg.players.length % PLAYER_COLORS.length];
           const name = BOT_NAMES.find(n => !cfg.players.some(p => p.name === n)) || 'Bot';
           cfg.players.push({ name, kind: online ? 'remote' : 'bot', level: 'normal', color, flag: patternFlag(color, cfg.players.length) });
           if (cfg.players.length > 4 && ['classic', 'mini'].includes(cfg.map.shape)) cfg.map.shape = 'extended';
-          if (cfg.players.length > 6 && ['classic', 'mini', 'extended', 'ring', 'star'].includes(cfg.map.shape)) {
+          if (!online && cfg.players.length > 6 && ['classic', 'mini', 'extended', 'ring', 'star'].includes(cfg.map.shape)) {
             cfg.map.shape = 'big';
             toast(t('🗺️ Con 7-8 jugadores cambio al mapa Grande'));
           }
@@ -350,13 +352,13 @@ export function lobbyScreen(root, opts = {}) {
     // a friend could not get in: say who and why, with a one-tap fix
     App.net.onRefused = (why, name) => {
       const n = cfg.players.length;
-      if (why === 'full' && n < 8)
+      if (why === 'full' && n < ONLINE_MAX)
         toast(h('span', null, t('🚪 {name} quiere entrar pero la sala está llena ({n}/{n}). ', { name, n }),
           h('button', { class: 'btn sm', onclick: () => setCapacity(n + 1) }, t('➕ Hacer sitio ({n})', { n: n + 1 }))), 'error', 10000);
       else if (why === 'closed')
         toast(h('span', null, t('🔒 {name} quiere entrar pero la sala está cerrada. ', { name }),
           h('button', { class: 'btn sm', onclick: () => { App.net.open = true; renderOnline(); } }, t('🟢 Abrir sala'))), 'error', 10000);
-      else toast(why === 'full' ? t('🚪 {name} no pudo entrar: la sala ya tiene el máximo de 8.', { name }) : t('🚪 {name} no pudo entrar: la partida ya empezó.', { name }), 'error', 6000);
+      else toast(why === 'full' ? t('🚪 {name} no pudo entrar: la sala ya tiene el máximo de {n}.', { name, n: ONLINE_MAX }) : t('🚪 {name} no pudo entrar: la partida ya empezó.', { name }), 'error', 6000);
     };
   }
   if (online && opts.capacity) {

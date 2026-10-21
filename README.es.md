@@ -54,7 +54,7 @@ En el móvil: Compartir → **Añadir a pantalla de inicio** (manifiesto PWA + i
 
 ### WebRTC / TURN (datos móviles)
 
-El emparejamiento usa el broker público de PeerJS; la partida viaja por WebRTC entre navegadores. Misma wifi suele bastar. En **4G/5G o NAT estricto** hace falta TURN: el cliente trae relés públicos (PeerJS y [freeTURN](https://freeturn.net/), credenciales públicas, sin secretos). Si un invitado no entra, el juego lo dice claro: misma wifi, cambiar datos/wifi, o un hotspot. Opcional: rellenar `METERED_APP` / `METERED_KEY` en `js/net.js` con una app gratis de [Metered](https://metered.ca/) (no subir claves).
+El emparejamiento usa el broker público de PeerJS; la partida viaja por WebRTC entre navegadores. Misma wifi suele bastar. En **4G/5G o NAT/CGNAT estricto** hace falta TURN por **TCP/TLS** (muchas redes móviles bloquean UDP 3478): el cliente trae [freeTURN](https://freeturn.net/) `turns:` 5349 y `turns:turn.evan-brass.net:443?transport=tcp` (guest/password, TLS 1.3). Credenciales públicas, sin secretos. Un `?room=` que no responde corta a los **12 s** con error y Reintentar; Cancelar y ← Menú siempre funcionan. Vs bots no usa PeerJS. Opcional: `METERED_APP` / `METERED_KEY` en `js/net.js` (no subir claves).
 
 ## Licencia
 

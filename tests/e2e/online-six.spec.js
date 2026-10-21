@@ -108,11 +108,11 @@ test('6 móviles: sala online, enlace, colocación y sincronía', async ({ brows
       await host.page.screenshot({ path: join(ART, 'debug-menu.png'), fullPage: true });
       throw new Error('No aparece el menú. HTML:\n' + (await host.page.content()).slice(0, 2000) + '\nERR:\n' + host.errors.join('\n'));
     }
-    await onlineBtn.click({ force: true });
+    await onlineBtn.tap({ force: false });
     await expect(host.page.getByTestId('create-room')).toBeVisible();
     const cap6 = host.page.locator('[data-cap="6"]');
-    if (await cap6.count()) await cap6.click({ force: true });
-    await host.page.getByTestId('create-room').click({ force: true });
+    if (await cap6.count()) await cap6.tap({ force: false });
+    await host.page.getByTestId('create-room').tap({ force: false });
     const codeEl = host.page.getByTestId('room-code');
     await expect(codeEl).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 40_000 });
     const code = (await codeEl.innerText()).trim();
@@ -133,7 +133,7 @@ test('6 móviles: sala online, enlace, colocación y sincronía', async ({ brows
         if (await nameIn.isVisible().catch(() => false)) {
           if (!(await nameIn.inputValue())) await nameIn.fill(g.name);
         }
-        await g.page.getByTestId('join-room').click({ force: true, timeout: 4_000 }).catch(() => {});
+        await g.page.getByTestId('join-room').tap({ force: false, timeout: 4_000 }).catch(() => {});
       }
       try {
         await expect(waiting).toBeVisible({ timeout: 40_000 });
