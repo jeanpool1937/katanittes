@@ -790,11 +790,16 @@ export class Board3D {
     // middle button = drop a 1 s marker there (zoom stays on the wheel)
     this.controls.mouseButtons.MIDDLE = -1;
     this.canvas.addEventListener('pointerdown', e => {
-      if (e.button !== 1) return;
-      e.preventDefault();
-      const p = this.pickGround(e.clientX, e.clientY);
-      if (p && this.onPing) this.onPing(p.x, p.z);
+      if (e.button === 1) {
+        e.preventDefault();
+        const p = this.pickGround(e.clientX, e.clientY);
+        if (p && this.onPing) this.onPing(p.x, p.z);
+        return;
+      }
+      if (e.button && e.button !== 0) return;
+      this._ptrDown = { x: e.clientX, y: e.clientY, t: this.now() };
     });
+    this.canvas.addEventListener('pointerup', e => this._onCanvasTap(e));
     this.canvas.addEventListener('mousedown', e => e.button === 1 && e.preventDefault()); // no autoscroll
 
     this.composer = new EffectComposer(r);
@@ -1049,6 +1054,95 @@ export class Board3D {
     for (const m of pg.mats) m.dispose();
   }
 
+  _spotWorld(kind, id) {
+    const st = this.lastSt;
+    if (!st) return null;
+    const bd = st.board;
+    const vy = v => Math.max(this.heightAt(bd.vertices[v].x, bd.vertices[v].y), 0.05);
+    if (kind === 'settlement' || kind === 'city') {
+      const V = bd.vertices[id];
+      if (!V) return null;
+      return { x: V.x, y: vy(id) + (kind === 'city' ? 0.45 : 0.08), z: V.y };
+    }
+    if (kind === 'road') {
+      const E = bd.edges[id];
+      if (!E) return null;
+      const a = bd.vertices[E.a], b = bd.vertices[E.b];
+      return { x: (a.x + b.x) / 2, y: (vy(E.a) + vy(E.b)) / 2 + 0.06, z: (a.y + b.y) / 2 };
+    }
+    if (kind === 'robber') {
+      const t = bd.tiles[id];
+      if (!t) return null;
+      return { x: t.x + 0.3, y: Math.max(this.heightAt(t.x, t.y), 0.3) + 0.3, z: t.y - 0.25 };
+    }
+    return null;
+  }
+
+  _pickId(id) {
+    const inter = this.inter;
+    if (!inter || !inter.legal.has(id)) return false;
+    const token = inter.kind + ':' + id;
+    if (this._lastPick === token && this.now() - (this._lastPickAt || 0) < 400) return false;
+    this._lastPick = token;
+    this._lastPickAt = this.now();
+    inter.onPick(id);
+    return true;
+  }
+
+  _pickLegal(clientX, clientY) {
+    const inter = this.inter;
+    if (!inter) return false;
+    let best = null, bestD = 36;
+    for (const id of inter.legal) {
+      const w = this._spotWorld(inter.kind, id);
+      if (!w) continue;
+      const s = this.toScreen(w.x, w.y, w.z);
+      if (!s) continue;
+      const d = Math.hypot(s.x - clientX, s.y - clientY);
+      if (d < bestD) {
+        bestD = d;
+        best = id;
+      }
+    }
+    return best != null ? this._pickId(best) : false;
+  }
+
+  _onCanvasTap(e) {
+    const s = this._ptrDown;
+    this._ptrDown = null;
+    if (!s || (e.button && e.button !== 0)) return;
+    if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > 14) return;
+    if (this.now() - s.t > 700) return;
+    this._pickLegal(e.clientX, e.clientY);
+  }
+
+  _resetSpotsReady() {
+    this.spotsReady = false;
+    this._spotFrames = 0;
+    if (this.labels && this.labels.domElement) {
+      this.labels.domElement.classList.remove('spots-ready');
+      delete this.labels.domElement.dataset.spotsReady;
+    }
+    if (this.container) this.container.dataset.spotsReady = '0';
+  }
+
+  _maybeMarkSpotsReady() {
+    if (this.spotsReady) return;
+    if (!this.inter) {
+      if (this.container && this.container.dataset.spotsReady !== '0') this.container.dataset.spotsReady = '0';
+      return;
+    }
+    if (this.camAnim) return;
+    this._spotFrames = (this._spotFrames || 0) + 1;
+    if (this._spotFrames < 2) return;
+    this.spotsReady = true;
+    if (this.labels && this.labels.domElement) {
+      this.labels.domElement.classList.add('spots-ready');
+      this.labels.domElement.dataset.spotsReady = '1';
+    }
+    if (this.container) this.container.dataset.spotsReady = '1';
+  }
+
   // world point -> page coordinates (null when it is behind the camera)
   toScreen(x, y, z) {
     const v = new THREE.Vector3(x, y, z).project(this.camera);
@@ -1269,6 +1363,7 @@ export class Board3D {
       const t = el.style.transform;
       if (t && t.indexOf('.') >= 0) el.style.transform = t.replace(/(-?\d+\.\d+)px/g, (m, n) => Math.round(+n) + 'px');
     }
+    this._maybeMarkSpotsReady();
   }
 
   // ---------- build ----------
@@ -1962,6 +2057,7 @@ export class Board3D {
       add(o, 'robber' + t.id);
     }
 
+    this._resetSpotsReady();
     if (inter) {
       const mk = (id, x, y, z, cls) => {
         const el = document.createElement('button');
@@ -1972,9 +2068,13 @@ export class Board3D {
         el.setAttribute('aria-label', 'spot');
         el.style.setProperty('--pc', inter.color || '#fff');
         el.addEventListener('pointerdown', e => e.stopPropagation());
+        el.addEventListener('pointerup', e => {
+          e.stopPropagation();
+          this._pickId(id);
+        });
         el.addEventListener('click', e => {
           e.stopPropagation();
-          if (this.inter) this.inter.onPick(id);
+          this._pickId(id);
         });
         const o = new CSS2DObject(el);
         o.position.set(x, y, z);

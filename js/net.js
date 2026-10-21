@@ -216,30 +216,37 @@ export class Net {
     if (rej) rej(err);
   }
 
+  _safeReconnect(p) {
+    if (!this.active || !p || p.destroyed || this.peer !== p) return;
+    try { p.reconnect(); } catch {}
+  }
+
   _openPeer(p, timeoutMsg) {
     return new Promise((res, rej) => {
-      const ms = connectWaitMs();
-      const timer = setTimeout(() => {
+      let settled = false, timer;
+      const settle = (fn, arg) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
         this._pendingReject = null;
+        fn(arg);
+      };
+      const ms = connectWaitMs();
+      timer = setTimeout(() => {
         try { p.destroy(); } catch {}
-        rej(waitErr(timeoutMsg));
+        settle(rej, waitErr(timeoutMsg));
       }, ms);
       this._pendingReject = err => {
-        clearTimeout(timer);
         try { p.destroy(); } catch {}
-        rej(err);
+        settle(rej, err);
       };
-      p.on('open', () => {
-        clearTimeout(timer);
-        this._pendingReject = null;
-        res();
-      });
+      p.on('open', () => settle(res));
       p.on('error', e => {
+        // after open, peer-unavailable belongs to connect() (missing room), not a dead broker
+        if (settled) return;
         if (this.peer && this.peer !== p) return;
-        clearTimeout(timer);
-        this._pendingReject = null;
         try { p.destroy(); } catch {}
-        rej(e);
+        settle(rej, e);
       });
     });
   }
@@ -343,7 +350,7 @@ export class Net {
     });
     this.peer.on('disconnected', () => {
       // lost the broker (not the guests): try to get the id back
-      if (this.active) setTimeout(() => this.peer && !this.peer.destroyed && this.peer.reconnect(), 2000);
+      setTimeout(() => this._safeReconnect(this.peer), 2000);
     });
     this.onChange();
     return this.code;
@@ -663,12 +670,12 @@ export class Net {
     if (!this.peer || this.peer.destroyed) {
       const p = new Peer(opts);
       this.peer = p;
-      p.on('disconnected', () => this.active && !p.destroyed && setTimeout(() => p.reconnect(), 1500));
+      p.on('disconnected', () => setTimeout(() => this._safeReconnect(p), 1500));
       try {
         await this._openPeer(p, t('No se pudo hablar con el servidor de emparejamiento. Revisa la conexión e inténtalo de nuevo.'));
       } catch (e) {
         if (e && e.type === 'peer-unavailable' && first && !this.everConnected)
-          throw new Error(t('No existe una sala con ese código'));
+          throw new Error(t('No existe la sala {code} o el anfitrión ya no está', { code: this.code }));
         if (e && (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') && first && !this.everConnected)
           throw new Error(t('No se pudo hablar con el servidor de emparejamiento ({type}). Revisa la conexión e inténtalo de nuevo.', { type: e.type }));
         if (e instanceof Error && e.message) throw e;
@@ -677,28 +684,46 @@ export class Net {
     }
     if (!this.active) throw new Error(t('Búsqueda cancelada.'));
     return new Promise((res, rej) => {
+      const missing = () => t('No existe la sala {code} o el anfitrión ya no está', { code: this.code });
       const c = this.peer.connect(PREFIX + this.code, { reliable: true });
-      const timer = setTimeout(() => {
+      let finished = false, timer, onPeerErr;
+      const finish = fn => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
         this._pendingReject = null;
+        try { this.peer && this.peer.off && this.peer.off('error', onPeerErr); } catch {}
+        fn();
+      };
+      timer = setTimeout(() => {
         if (first && !this.everConnected) {
           try { c.close(); } catch {}
-          rej(new Error(t(CONNECT_HINT)));
+          finish(() => rej(new Error(t(CONNECT_HINT))));
           return;
         }
         try {
           c.close();
         } catch {}
-        this.retry();
-        res();
+        finish(() => { this.retry(); res(); });
       }, connectWaitMs());
+      onPeerErr = e => {
+        if (e && e.type === 'peer-unavailable') {
+          try { c.close(); } catch {}
+          finish(() => rej(new Error(missing())));
+        }
+      };
+      if (this.peer) this.peer.on('error', onPeerErr);
+      c.on('error', e => {
+        if (e && (e.type === 'peer-unavailable' || /unavailable/i.test(e.message || ''))) {
+          try { c.close(); } catch {}
+          finish(() => rej(new Error(missing())));
+        }
+      });
       this._pendingReject = err => {
-        clearTimeout(timer);
         try { c.close(); } catch {}
-        rej(err);
+        finish(() => rej(err));
       };
       c.on('open', () => {
-        clearTimeout(timer);
-        this._pendingReject = null;
         this.conn = c;
         this.everConnected = true;
         this.reconnecting = false;
@@ -716,7 +741,7 @@ export class Net {
         c.send({ type: 'hello', name: this.name, token: myToken(), flag: this.kingdom.flag, color: this.kingdom.color });
         this.onStatus('connected');
         if (App.onMeta) App.onMeta();
-        res();
+        finish(res);
       });
       c.on('data', msg => this.onClientData(msg));
       c.on('close', () => {
@@ -841,13 +866,13 @@ export class Net {
     clearInterval(this.voteTimer);
     clearInterval(this.hb);
     for (const t of this.timers.values()) clearTimeout(t);
+    const p = this.peer;
+    this.peer = null;
     try {
       if (this.role === 'client' && this.conn && this.conn.open) this.conn.send({ type: 'bye' });
     } catch {}
     setTimeout(() => {
-      try {
-        this.peer && this.peer.destroy();
-      } catch {}
+      try { p && !p.destroyed && p.destroy(); } catch {}
     }, 150);
   }
 }
