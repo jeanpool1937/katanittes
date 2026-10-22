@@ -1,4 +1,4 @@
-import { App } from '../app.js';
+import { App, TRADE_WAIT } from '../app.js';
 import { h, clear, rich, toast, sync } from './dom.js';
 import { BoardView } from './boardView.js';
 import { RES, TILE_INFO, COSTS, DEV_INFO, EVENTS } from '../engine/constants.js';
@@ -109,6 +109,8 @@ function wantFlatBoard() {
   return false;
 }
 
+const BOARD3D_WAIT = 20000;
+
 // ---------------- board (3D; the flat 2D map is a fallback, or ?gfx=flat for tests) ----------------
 async function mountBoard(u) {
   const loading = h('div', { class: 'board-loading jit' }, t('🏝️ Levantando la isla...'));
@@ -118,8 +120,16 @@ async function mountBoard(u) {
     if (skip3d) throw new Error('flat');
     const { Board3D } = await import('./board3d.js');
     if (ui !== u) return;
-    const b = await Board3D.create(u.boardWrap);
-    if (ui !== u) return b.dispose();
+    // a slow phone network must not leave you staring at "Levantando la isla" while it's your turn:
+    // after BOARD3D_WAIT the flat map takes over (and a late 3D board is thrown away)
+    const making = Board3D.create(u.boardWrap);
+    let late = false;
+    const b = await Promise.race([making, new Promise((_, no) => setTimeout(() => no(new Error('3d timeout')), BOARD3D_WAIT))]).catch(e => {
+      late = true;
+      making.then(x => x.dispose(), () => {});
+      throw e;
+    });
+    if (late || ui !== u) return b.dispose();
     u.board3d = u.board = b;
     b.onPing = (x, z) => {
       const now = Date.now();
@@ -511,6 +521,7 @@ export function render(st) {
     screen.dataset.players = String(st.players.length);
     screen.dataset.setup = st.setup ? st.setup.step : '';
     if (st.setup) screen.dataset.setupIdx = String(st.setup.idx);
+    screen.dataset.turn = String(st.turn || 0);
   }
   const v = computeViewer(st);
   App.viewer = v;
@@ -684,6 +695,10 @@ function renderBoard(st, v, locked) {
     ui.els.banner.textContent = txt;
   }
   ui.els.banner.classList.toggle('hidden', !txt);
+  // your move: the banner glows and the board's legal spots pulse harder
+  const mine = !locked && v >= 0 && G.pendingActors(st).includes(v) && (st.phase === 'setup' ? G.pendingActors(st)[0] === v : st.current === v && st.phase !== 'main');
+  ui.els.banner.classList.toggle('mine', mine);
+  ui.boardWrap.classList.toggle('my-move', mine);
 }
 
 function renderPlayers(st, v) {
@@ -784,7 +799,10 @@ function fillActions(bar, st, v, locked) {
   if (st.phase === 'setup' || !myTurn) {
     if (st.phase === 'discard' && st.pendingDiscards[v]) acts.append(h('button', { class: 'btn pink', onclick: () => render(App.state) }, t('🗑️ Descarta {n}', { n: st.pendingDiscards[v] })));
     else {
-      acts.append(h('div', { class: 'waiting' }, st.phase === 'setup' && G.pendingActors(st)[0] === v ? t('👆 Toca el tablero') : t('⏳ Esperando a {name}...', { name: st.players[G.pendingActors(st)[0]].name })));
+      const mySetup = st.phase === 'setup' && G.pendingActors(st)[0] === v;
+      acts.append(mySetup
+        ? h('div', { class: 'waiting your-turn', 'data-testid': 'your-turn' }, t('👆 Toca el tablero'), h('small', null, st.setup.step === 'settlement' ? t('Coloca tu poblado') : t('Coloca tu camino')))
+        : h('div', { class: 'waiting' }, t('⏳ Esperando a {name}...', { name: st.players[G.pendingActors(st)[0]].name })));
       if (st.phase !== 'setup') acts.append(affordPreview(st, v));
     }
     return;
@@ -820,7 +838,7 @@ function fillActions(bar, st, v, locked) {
     }, h('span', { class: 'bicon' }, '🃏'), h('span', null, t('Carta'), h('span', { class: 'cost' }, costIcons(COSTS.dev)))),
     h('button', { class: 'btn', disabled: !!st.trade, onclick: () => openTrade(v) }, t('🤝 Comerciar')),
     h('button', { class: 'btn sm ghost', title: t('Pista'), onclick: () => showHint(st, v) }, '💡'),
-    h('button', { class: 'btn green', onclick: () => App.dispatch({ type: 'endTurn', pid: v }) }, t('✅ Terminar')));
+    h('button', { class: 'btn green', 'data-testid': 'end-turn', onclick: () => App.dispatch({ type: 'endTurn', pid: v }) }, t('✅ Terminar')));
 }
 
 // out of turn: what your hand already pays for, so you can plan while the others play
@@ -846,7 +864,7 @@ function missing(res, cost) {
 }
 
 function speedControl() {
-  const opts = [[1400, '🐢'], [650, '▶️'], [250, '⏩'], [60, '⚡']];
+  const opts = [[900, '🐢'], [250, '▶️'], [120, '⏩'], [40, '⚡']];
   return h('div', { class: 'chips', style: { marginLeft: 'auto' } }, opts.map(([ms, l]) => h('button', {
     class: 'chip' + (App.speed === ms ? ' on' : ''), title: t('Velocidad de los bots'), onclick: () => { App.setSpeed(ms); render(App.state); App.scheduleBots(); },
   }, l)));
@@ -971,9 +989,10 @@ function renderOffer(st, v, locked) {
   }
   if (!cur || cur.dataset.trade !== panel.dataset.trade) {
     clear(box);
-    cur = h('div', { class: 'offer', 'data-trade': panel.dataset.trade });
+    cur = h('div', { class: 'offer', 'data-trade': panel.dataset.trade, 'data-testid': 'trade-offer' });
     box.append(cur);
   }
+  cur.classList.toggle('needs-me', panel.classList.contains('needs-me'));
   sync(cur, ...panel.childNodes);
 }
 
@@ -1009,6 +1028,13 @@ function offerPanel(st, v, locked) {
   }
   if (iAmProposer) resp.append(h('button', { class: 'btn sm ghost', onclick: () => App.dispatch({ type: 'cancelTrade', pid: tr.from }) }, t('Cancelar oferta')));
   panel.append(resp);
+  // a bot's offer withdraws itself after TRADE_WAIT: show the time running out so it's clearly your call
+  if (from.kind === 'bot' && pendingMe.length) {
+    panel.classList.add('needs-me');
+    const w = App.tradeWait && App.tradeWait.id === tr.id ? App.tradeWait.at : Date.now();
+    const gone = Math.min(TRADE_WAIT, Math.max(0, Date.now() - w));
+    panel.append(h('i', { class: 'offer-timer', style: { animationDuration: TRADE_WAIT + 'ms', animationDelay: -Math.round(gone / 500) * 500 + 'ms' } }));
+  }
   return panel;
 }
 
