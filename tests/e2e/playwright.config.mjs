@@ -29,7 +29,7 @@ export default defineConfig({
     },
     {
       name: 'webkit-phone',
-      testMatch: '{mobile-taps,join-hang}.spec.js',
+      testMatch: '{mobile-taps,join-hang,bots-pace}.spec.js',
       use: { ...devices['iPhone 13'], locale: 'es-ES', hasTouch: true, isMobile: true },
     },
     {
